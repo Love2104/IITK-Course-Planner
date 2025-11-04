@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Calendar, Plus, RotateCcw, X, BookOpen, Lightbulb, Clock, Download, Zap } from 'lucide-react';
+import { Calendar, Plus, RotateCcw, X, BookOpen, Lightbulb, Clock, Download, Zap, AlertCircle, Filter, Trash2 } from 'lucide-react';
 
 // --- 0. FILE DEPENDENCY ---
 // This application now attempts to fetch course data from a file named:
@@ -9,7 +9,7 @@ import { Calendar, Plus, RotateCcw, X, BookOpen, Lightbulb, Clock, Download, Zap
 
 // --- 0. GEMINI API CONFIGURATION ---
 const API_KEY = ""; // Canvas will provide this key at runtime
-const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
+const MODEL_NAME = 'gemini-1.5-flash-preview-0514';
 
 // --- 1. INTERFACES ---
 
@@ -37,6 +37,17 @@ interface TimeSlot {
     type?: string; 
 }
 
+/**
+ * NEW: Interface for the new day-time filter.
+ */
+interface DayTimeFilter {
+    id: number;
+    day: string;
+    start: number;
+    end: number;
+}
+
+
 // --- 2. SCHEDULE UTILITIES (From scheduleParser.ts) ---
 
 const DAY_MAP: Record<string, string> = {
@@ -48,6 +59,9 @@ const DAY_MAP: Record<string, string> = {
     'S': 'Sat',
 };
 
+// All days available for filtering
+const FILTER_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 function timeToMinutes(time: string): number {
     const [hours, minutes] = time.split(':').map(Number);
     if (isNaN(hours) || isNaN(minutes)) return 0;
@@ -57,7 +71,7 @@ function timeToMinutes(time: string): number {
 function formatTime(minutes: number): string {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(0, '0')}`;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 }
 
 function parseTimeRange(timeRange: string): { start: string; end: string } {
@@ -145,21 +159,77 @@ function getAllTimeSlots(course: Course): (TimeSlot & { type: string })[] {
 }
 
 /**
- * NEW: Checks if a course's schedule entirely falls within the given time range.
+ * NEW: Checks if a course's schedule fits ENTIRELY within the selected day-time filter windows.
  */
-function isCourseWithinTimeRange(course: Course, timeFilter: { start: number; end: number }): boolean {
+function isCourseWithinDayTimeFilters(course: Course, filters: DayTimeFilter[]): boolean {
+    // If no filters are applied, show all courses.
+    if (filters.length === 0) {
+        return true;
+    }
+    
     const slots = getAllTimeSlots(course);
     
-    // If a course has no scheduled slots, it's considered available
-    if (slots.length === 0) return true; 
+    // If a course has no scheduled slots (e.g., UGP), it's considered available.
+    if (slots.length === 0) {
+        return true; 
+    }
 
+    // Every single slot of the course must fit into at least one of the filter windows.
     for (const slot of slots) {
-        // If the slot starts before the filter start OR ends after the filter end, it fails.
-        if (slot.startMinutes < timeFilter.start || slot.endMinutes > timeFilter.end) {
+        const slotFits = filters.some(filter => 
+            slot.day === filter.day &&
+            slot.startMinutes >= filter.start &&
+            slot.endMinutes <= filter.end
+        );
+        
+        // If even one slot doesn't fit, the course is filtered out.
+        if (!slotFits) {
             return false;
         }
     }
-    return true; // All slots fit entirely within the filter range
+
+    // All slots found a window.
+    return true; 
+}
+
+
+/**
+ * NEW: Checks if a single course (courseA) clashes with any course in a list (courses).
+ * Returns a list of course codes it clashes with.
+ */
+function checkClash(courseA: Course, courses: Course[]): string[] {
+    const clashes: string[] = [];
+    if (courses.length === 0) return clashes;
+    
+    const slotsA = getAllTimeSlots(courseA);
+    if (slotsA.length === 0) return clashes;
+
+    // 1. Build a map of all slots from the existing selected courses
+    const slotMap: Map<string, Array<{ course: Course; slot: TimeSlot & { type: string } }>> = new Map();
+    for (const courseB of courses) {
+        const slotsB = getAllTimeSlots(courseB);
+        for (const slotB of slotsB) {
+            const key = slotB.day;
+            if (!slotMap.has(key)) slotMap.set(key, []);
+            slotMap.get(key)!.push({ course: courseB, slot: slotB });
+        }
+    }
+
+    // 2. Check courseA's slots against the populated map
+    for (const slotA of slotsA) {
+        const daySlots = slotMap.get(slotA.day);
+        if (daySlots) {
+            for (const existing of daySlots) {
+                // Check for overlap
+                const overlap = (slotA.startMinutes < existing.slot.endMinutes && slotA.endMinutes > existing.slot.startMinutes);
+                if (overlap) {
+                    clashes.push(existing.course.course_code);
+                }
+            }
+        }
+    }
+    // Return unique clashing course codes
+    return [...new Set(clashes)]; 
 }
 
 
@@ -211,14 +281,16 @@ function detectConflicts(courses: Course[]): { conflictKeys: Set<string>, confli
 /**
  * Calculates the overall time range based on courses or a provided filter.
  */
-function getTimeRange(courses: Course[], timeFilter: { start: number; end: number } | null): { earliest: number; latest: number } {
+function getTimeRange(courses: Course[], dayTimeFilters: DayTimeFilter[]): { earliest: number; latest: number } {
     let earliest = Infinity;
     let latest = -Infinity;
 
-    if (timeFilter) {
+    if (dayTimeFilters.length > 0) {
         // If filter is present, use filter range
-        earliest = timeFilter.start;
-        latest = timeFilter.end;
+        for (const filter of dayTimeFilters) {
+            earliest = Math.min(earliest, filter.start);
+            latest = Math.max(latest, filter.end);
+        }
     } else {
         // Otherwise, calculate range from courses
         for (const course of courses) {
@@ -234,11 +306,11 @@ function getTimeRange(courses: Course[], timeFilter: { start: number; end: numbe
             earliest = 8 * 60;
             latest = 18 * 60;
         }
-        
-        // Snap to nearest hour for grid display
-        earliest = Math.floor(earliest / 60) * 60;
-        latest = Math.ceil(latest / 60) * 60;
     }
+    
+    // Snap to nearest hour for grid display
+    earliest = Math.floor(earliest / 60) * 60;
+    latest = Math.ceil(latest / 60) * 60;
 
     // Ensure range is valid and at least one hour
     if (latest <= earliest) {
@@ -253,7 +325,7 @@ function getTimeRange(courses: Course[], timeFilter: { start: number; end: numbe
 
 interface TimetableGridProps {
     courses: Course[];
-    timeFilter: { start: number; end: number } | null;
+    dayTimeFilters: DayTimeFilter[]; // Changed from timeFilter
     gridRef: React.RefObject<HTMLDivElement>;
     conflictPairs: Set<string>;
     onDownload: () => void;
@@ -274,12 +346,12 @@ const BRANCH_COLORS: Record<string, string> = {
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const CELL_HEIGHT = 60; // 60px per hour
 
-function TimetableGrid({ courses, timeFilter, gridRef, conflictPairs, onDownload }: TimetableGridProps) {
+function TimetableGrid({ courses, dayTimeFilters, gridRef, conflictPairs, onDownload }: TimetableGridProps) {
     // Detect schedule conflicts and get the keys for red border coloring
     const { conflictKeys } = useMemo(() => detectConflicts(courses), [courses]);
 
     // Calculate earliest/latest class time based on courses or filter
-    const { earliest, latest } = useMemo(() => getTimeRange(courses, timeFilter), [courses, timeFilter]);
+    const { earliest, latest } = useMemo(() => getTimeRange(courses, dayTimeFilters), [courses, dayTimeFilters]);
 
     // Create time slots for the grid (hourly intervals)
     const timeSlots = useMemo(() => {
@@ -497,130 +569,11 @@ function TimetableGrid({ courses, timeFilter, gridRef, conflictPairs, onDownload
     );
 }
 
-// --- 4. TIME FILTER MODAL COMPONENT (Existing) ---
+// --- 4. TIME FILTER MODAL COMPONENT (REMOVED) ---
+// This component is no longer needed as the filter logic is moved into CourseSelector.
 
-interface TimeFilterModalProps {
-    onClose: () => void;
-    onApply: (start: string, end: string) => void;
-}
 
-const TimeFilterModal = ({ onClose, onApply }: TimeFilterModalProps) => {
-    const [startTime, setStartTime] = useState('');
-    const [endTime, setEndTime] = useState('');
-    const [error, setError] = useState('');
-
-    const handleApply = () => {
-        setError('');
-
-        if (!startTime || !endTime) {
-            setError('Please enter both start and end times.');
-            return;
-        }
-
-        const startMin = timeToMinutes(startTime);
-        const endMin = timeToMinutes(endTime);
-
-        if (startMin >= endMin) {
-            setError('Start time must be earlier than end time.');
-            return;
-        }
-
-        if (startMin < 0 || endMin > 24 * 60) {
-            setError('Invalid time format. Use HH:MM (e.g., 08:00 or 17:30).');
-            return;
-        }
-
-        onApply(startTime, endTime);
-        onClose();
-    };
-
-    const presetTimes = [
-        { label: 'Morning (9:00 - 13:00)', start: '09:00', end: '13:00' },
-        { label: 'Afternoon (13:00 - 17:00)', start: '13:00', end: '17:00' },
-        { label: 'Evening (17:00 - 21:00)', start: '17:00', end: '21:00' },
-    ];
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
-                <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-                    <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                        <Clock className='w-6 h-6 text-blue-500' /> Filter by Time Range
-                    </h3>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                    >
-                        <X className="w-6 h-6 text-slate-600" />
-                    </button>
-                </div>
-                
-                <div className="p-6 space-y-4">
-                    <p className="text-slate-600">Enter a time range (HH:MM format, 24-hour clock) to restrict the viewable hours.</p>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="block text-sm font-semibold text-slate-700">Start Time</label>
-                            <input
-                                type="time"
-                                value={startTime}
-                                onChange={(e) => setStartTime(e.target.value)}
-                                className="w-full px-4 py-2 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="block text-sm font-semibold text-slate-700">End Time</label>
-                            <input
-                                type="time"
-                                value={endTime}
-                                onChange={(e) => setEndTime(e.target.value)}
-                                className="w-full px-4 py-2 rounded-xl border-2 border-slate-200 bg-slate-50o text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                            />
-                        </div>
-                    </div>
-                    
-                    {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-                    
-                    <div className="pt-2">
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">Or Select a Preset</label>
-                        <div className="flex flex-wrap gap-2">
-                            {presetTimes.map(preset => (
-                                <button
-                                    key={preset.label}
-                                    onClick={() => {
-                                        setStartTime(preset.start);
-                                        setEndTime(preset.end);
-                                        setError('');
-                                    }}
-                                    className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors"
-                                >
-                                    {preset.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    
-                </div>
-                <div className="p-6 flex justify-end gap-3 border-t border-slate-200">
-                    <button
-                        onClick={handleApply}
-                        className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-xl transition-all shadow-md"
-                    >
-                        Apply Filter
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="bg-slate-300 hover:bg-slate-400 text-slate-800 font-bold py-2 px-4 rounded-xl transition-all shadow-md"
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// --- 5. LLM ANALYSIS MODAL (NEW) ---
+// --- 5. LLM ANALYSIS MODAL (Unchanged) ---
 
 interface AnalysisModalProps {
     analysis: string;
@@ -659,50 +612,109 @@ const CourseLoadAnalysisModal = ({ analysis, onClose }: AnalysisModalProps) => {
 };
 
 
-// --- 6. COURSE SELECTOR COMPONENT (Integrated) ---
+// --- 6. COURSE SELECTOR COMPONENT (HEAVILY MODIFIED) ---
+
+interface CourseSelectorProps {
+    courses: Course[];
+    onViewTimetable: (selectedCourses: Course[]) => void;
+    // NEW Filter Props
+    dayTimeFilters: DayTimeFilter[];
+    onAddFilter: (day: string, start: number, end: number) => void;
+    onRemoveFilter: (id: number) => void;
+    onClearAllFilters: () => void;
+    // Analysis Props
+    onAnalyze: () => void;
+    isAnalyzing: boolean;
+}
+
+
 function CourseSelector({
   courses,
   onViewTimetable,
-  onFilterTime,
-  onClearFilter,
-  timeFilter,
+  dayTimeFilters,
+  onAddFilter,
+  onRemoveFilter,
+  onClearAllFilters,
   onAnalyze,
   isAnalyzing,
 }: CourseSelectorProps) {
   const [selectedBranch, setSelectedBranch] = useState<string>(''); // placeholder by default
+  const [selectedCourseType, setSelectedCourseType] = useState<string>('ALL'); 
   const [selectedCourseCode, setSelectedCourseCode] = useState<string>('');
   const [selectedCourses, setSelectedCourses] = useState<Course[]>([]);
   const [showAvailableCourses, setShowAvailableCourses] = useState(false);
   const [showRecommendations, setShowRecommendations] = useState(false);
-  const [showFilterModal, setShowFilterModal] = useState(false);
 
-  // Keep only real branches here (we’ll inject “All Branches” in the UI)
+  // --- NEW Filter Form State ---
+  const [newFilterDay, setNewFilterDay] = useState<string>('Mon');
+  const [newFilterStart, setNewFilterStart] = useState<string>('09:00');
+  const [newFilterEnd, setNewFilterEnd] = useState<string>('17:00');
+
+
   const branches = useMemo(() => {
     const uniqueBranches = Array.from(new Set(courses.map(c => c.branch))).sort();
     return uniqueBranches;
   }, [courses]);
+  
+  const courseTypes = useMemo(() => {
+      const uniqueTypes = Array.from(new Set(courses.map(c => c.course_type))).sort();
+      return ['ALL', ...uniqueTypes];
+  }, [courses]);
+
 
   /**
    * UPDATED:
-   * - If selectedBranch === 'ALL' -> use all courses
-   * - Else if empty -> []
-   * - Else -> only that branch
-   * - Apply timeFilter in all cases where list is non-empty
+   * - Filters by Branch
+   * - Filters by Course Type
+   * - Filters by the new DayTimeFilter list
    */
   const filteredCourses = useMemo(() => {
-    if (!selectedBranch) return [];
+    // 1. Filter by Branch
+    let filtered = (!selectedBranch) 
+        ? [] // No branch selected, show nothing
+        : (selectedBranch === 'ALL')
+            ? courses
+            : courses.filter(c => c.branch === selectedBranch);
 
-    let list =
-      selectedBranch === 'ALL'
-        ? courses
-        : courses.filter(c => c.branch === selectedBranch);
+    // 2. Filter by Course Type
+    filtered = (selectedCourseType === 'ALL')
+        ? filtered
+        : filtered.filter(c => c.course_type === selectedCourseType);
 
-    if (timeFilter) {
-      list = list.filter(course => isCourseWithinTimeRange(course, timeFilter));
+    // 3. Apply new Day/Time filters
+    if (dayTimeFilters.length > 0) {
+        filtered = filtered.filter(course => 
+            isCourseWithinDayTimeFilters(course, dayTimeFilters)
+        );
     }
 
-    return list;
-  }, [courses, selectedBranch, timeFilter]);
+    return filtered;
+  }, [courses, selectedBranch, selectedCourseType, dayTimeFilters]);
+  
+  
+  /**
+   * NEW: Real-time clash detection
+   * This memo calculates the clash status for every course in the filtered dropdown.
+   */
+  const courseClashStatus = useMemo(() => {
+      const statusMap = new Map<string, string[]>(); // Map<course_code, clashing_course_codes[]>
+      if (selectedCourses.length === 0) {
+          return statusMap; // No clashes possible if nothing is selected
+      }
+      
+      for (const course of filteredCourses) {
+          // Don't check against itself
+          const alreadySelected = selectedCourses.some(sc => sc.course_code === course.course_code);
+          if (alreadySelected) continue;
+
+          const clashes = checkClash(course, selectedCourses);
+          if (clashes.length > 0) {
+              statusMap.set(course.course_code, clashes);
+          }
+      }
+      return statusMap;
+  }, [filteredCourses, selectedCourses]);
+  
 
   const totalCredits = useMemo(
     () => selectedCourses.reduce((sum, course) => sum + course.credits, 0),
@@ -712,6 +724,11 @@ function CourseSelector({
   const handleBranchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedBranch(e.target.value);
     setSelectedCourseCode('');
+  };
+  
+  const handleCourseTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      setSelectedCourseType(e.target.value);
+      setSelectedCourseCode('');
   };
 
   const handleCourseChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -726,8 +743,16 @@ function CourseSelector({
 
     const alreadyAdded = selectedCourses.some(c => c.course_code === selectedCourseCode);
     if (alreadyAdded) {
-      console.error('This course is already added!');
+      alert('This course is already in your selected list.');
       return;
+    }
+    
+    // Check for clashes before adding
+    const clashes = checkClash(courseToAdd, selectedCourses);
+    if (clashes.length > 0) {
+        if (!confirm(`⚠️ This course clashes with ${clashes.join(', ')}.\nAre you sure you want to add it?`)) {
+            return;
+        }
     }
 
     setSelectedCourses(prev => [...prev, courseToAdd]);
@@ -740,10 +765,25 @@ function CourseSelector({
 
   const handleReset = () => {
     setSelectedBranch(''); // back to placeholder
+    setSelectedCourseType('ALL');
     setSelectedCourseCode('');
     setSelectedCourses([]);
-    onClearFilter();
+    onClearAllFilters(); // Use the new clear all function
   };
+
+  // --- NEW: Handler for the new filter form ---
+  const handleAddFilterClick = () => {
+      const startMin = timeToMinutes(newFilterStart);
+      const endMin = timeToMinutes(newFilterEnd);
+      
+      if (startMin >= endMin) {
+          alert("Start time must be before end time.");
+          return;
+      }
+      
+      onAddFilter(newFilterDay, startMin, endMin);
+  };
+
 
   const getRecommendedCourses = () => {
     if (selectedCourses.length === 0) return [];
@@ -765,12 +805,6 @@ function CourseSelector({
       .slice(0, 10);
   };
 
-  const handleApplyFilter = (start: string, end: string) => {
-    const startMin = timeToMinutes(start);
-    const endMin = timeToMinutes(end);
-    onFilterTime(startMin, endMin);
-  };
-
   return (
     <>
       <div className="max-w-4xl mx-auto">
@@ -783,15 +817,14 @@ function CourseSelector({
             {/* Branch Selection */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Select Branch
+                1. Select Branch
               </label>
               <select
                 value={selectedBranch}
                 onChange={handleBranchChange}
                 className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
-                <option value="">Select Branch</option>
-                {/* ✅ Added this option */}
+                <option value="">Select Branch...</option>
                 <option value="ALL">All Branches</option>
                 {branches.map(branch => (
                   <option key={branch} value={branch}>
@@ -800,11 +833,106 @@ function CourseSelector({
                 ))}
               </select>
             </div>
+            
+            {/* Course Type Selection */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                2. Filter by Course Type (Optional)
+              </label>
+              <select
+                  value={selectedCourseType}
+                  onChange={handleCourseTypeChange}
+                  disabled={!selectedBranch}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50"
+              >
+                  {courseTypes.map(type => (
+                      <option key={type} value={type}>
+                          {type}
+                      </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* --- NEW Day/Time Filter UI --- */}
+            <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    3. Filter by Available Time (Optional)
+                </label>
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        {/* Day Select */}
+                        <div className='md:col-span-2'>
+                            <label className="block text-xs font-medium text-slate-600">Day</label>
+                            <select 
+                                value={newFilterDay}
+                                onChange={e => setNewFilterDay(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border-2 border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                {FILTER_DAYS.map(day => <option key={day} value={day}>{day}</option>)}
+                            </select>
+                        </div>
+                        {/* Start Time */}
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600">Start Time</label>
+                            <input
+                                type="time"
+                                value={newFilterStart}
+                                onChange={e => setNewFilterStart(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border-2 border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+                        {/* End Time */}
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600">End Time</label>
+                            <input
+                                type="time"
+                                value={newFilterEnd}
+                                onChange={e => setNewFilterEnd(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border-2 border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleAddFilterClick}
+                        className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md"
+                    >
+                        <Filter className="w-4 h-4" />
+                        Add Time Window Filter
+                    </button>
+
+                    {/* Active Filters List */}
+                    {dayTimeFilters.length > 0 && (
+                        <div className="pt-3 space-y-2">
+                            <div className="flex justify-between items-center">
+                                <h4 className="text-sm font-semibold text-slate-700">Active Filters:</h4>
+                                <button 
+                                    onClick={onClearAllFilters} 
+                                    className="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1"
+                                >
+                                    <Trash2 className="w-3 h-3" /> Clear All
+                                </button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {dayTimeFilters.map(f => (
+                                    <div key={f.id} className="flex items-center gap-2 bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">
+                                        <span>{f.day} ({formatTime(f.start)} - {formatTime(f.end)})</span>
+                                        <button onClick={() => onRemoveFilter(f.id)} className="text-green-600 hover:text-green-800">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
 
             {/* Course Selection (Filtered by branch + time) */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Select Course {timeFilter && (
+                4. Select Course
+                {dayTimeFilters.length > 0 && (
                   <span className="text-sm text-orange-600 font-normal"> (Filtered by time)</span>
                 )}
               </label>
@@ -814,15 +942,38 @@ function CourseSelector({
                 disabled={!selectedBranch}
                 className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option value="">Select Course</option>
-                {filteredCourses.map(course => (
-                  <option key={course.course_code} value={course.course_code}>
-                    {course.course_code} - {course.course_name}
-                  </option>
-                ))}
+                <option value="">
+                    {selectedBranch ? 'Select a course...' : 'Please select a branch first'}
+                </option>
+                
+                {/* --- NEW: Options with Clash Detection --- */}
+                {filteredCourses.map(course => {
+                    const clashes = courseClashStatus.get(course.course_code);
+                    const hasClash = !!clashes;
+
+                    // Do not show courses that are already selected
+                    if (selectedCourses.some(sc => sc.course_code === course.course_code)) {
+                        return null;
+                    }
+
+                    return (
+                        <option 
+                            key={course.course_code} 
+                            value={course.course_code}
+                            // Styling <option> is limited. Prefixing is the most reliable way.
+                            // We use CSS to style the <select> itself if a clashing option is chosen
+                            className={hasClash ? 'text-red-700 bg-red-50' : 'text-green-700'}
+                        >
+                            {hasClash 
+                                ? `🔴 ${course.course_code} - ${course.course_name} (Clashes with: ${clashes.join(', ')})`
+                                : `✅ ${course.course_code} - ${course.course_name}`
+                            }
+                        </option>
+                    );
+                })}
                 {filteredCourses.length === 0 && selectedBranch && (
                   <option value="" disabled>
-                    No courses available in this branch/time filter.
+                    No courses available with current filters.
                   </option>
                 )}
               </select>
@@ -859,20 +1010,20 @@ function CourseSelector({
                     key={course.course_code}
                     className="flex items-center justify-between bg-slate-50 rounded-xl p-4 border-2 border-slate-200"
                   >
-                    <div className="flex-1">
-                      <div className="font-semibold text-slate-800">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-slate-800 truncate">
                         {course.course_code}
                       </div>
-                      <div className="text-sm text-slate-600">{course.course_name}</div>
-                      <div className="text-sm text-slate-500">{course.instructor}</div>
+                      <div className="text-sm text-slate-600 truncate">{course.course_name}</div>
+                      <div className="text-sm text-slate-500 truncate">{course.instructor}</div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-bold text-blue-600">
+                    <div className="flex items-center gap-4 pl-4">
+                      <span className="text-sm font-bold text-blue-600 flex-shrink-0">
                         {course.credits} cr
                       </span>
                       <button
                         onClick={() => handleRemoveCourse(course.course_code)}
-                        className="p-2 hover:bg-red-100 rounded-lg transition-colors"
+                        className="p-2 hover:bg-red-100 rounded-lg transition-colors flex-shrink-0"
                       >
                         <X className="w-5 h-5 text-red-500" />
                       </button>
@@ -883,193 +1034,158 @@ function CourseSelector({
             </div>
           )}
 
-          {/* Credit Summary
+          {/* Credit Summary */}
           <div className="mt-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 text-white">
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-semibold">Total Credits</span>
-              <span className="text-4xl font-bold">{totalCredits.toString().padStart(2, '0')}</span>
-            </div>
-            <div className="mt-2 text-sm text-blue-100 text-center"> */}
+              <div className="flex items-center justify-between">
+                  <span className="text-lg font-semibold">Total Credits</span>
+                  <span className="text-4xl font-bold">{totalCredits.toString().padStart(2, '0')}</span>
+              </div>
+              <div className="mt-2 text-sm text-blue-100 text-center">
+                  {totalCredits < 18 && 'Minimum credit requirement recommended (18-24)'}
+                  {totalCredits >= 18 && totalCredits <= 24 && 'Good course load!'}
+                  {totalCredits > 24 && 'Heavy course load - consider reducing'}
+              </div>
+          </div>
 
-                    {/* Credit Summary */}
-                    <div className="mt-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 text-white">
-                        <div className="flex items-center justify-between">
-                            <span className="text-lg font-semibold">Total Credits</span>
-                            <span className="text-4xl font-bold">{totalCredits.toString().padStart(2, '0')}</span>
-                        </div>
-                        <div className="mt-2 text-sm text-blue-100 text-center">
-                            {totalCredits < 18 && 'Minimum credit requirement recommended (18-24)'}
-                            {totalCredits >= 18 && totalCredits <= 24 && 'Good course load!'}
-                            {totalCredits > 24 && 'Heavy course load - consider reducing'}
-                        </div>
+          {/* Action Buttons */}
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                  onClick={() => setShowAvailableCourses(true)}
+                  disabled={!selectedBranch}
+                  className="bg-white border-2 border-blue-500 text-blue-600 font-bold py-3 px-6 rounded-xl transition-all hover:bg-blue-50 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                  <BookOpen className="w-5 h-5" />
+                  All Courses ({selectedBranch === 'ALL' ? 'All' : selectedBranch})
+              </button>
+              <button
+                  onClick={() => setShowRecommendations(true)}
+                  disabled={selectedCourses.length === 0}
+                  className="bg-white border-2 border-blue-500 text-blue-600 font-bold py-3 px-6 rounded-xl transition-all hover:bg-blue-50 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                  <Lightbulb className="w-5 h-5" />
+                  Recommendations
+              </button>
+          </div>
+
+          {/* View Timetable & Analyze Buttons */}
+          {selectedCourses.length > 0 && (
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                      onClick={onAnalyze}
+                      disabled={isAnalyzing}
+                      className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                      <Zap className="w-5 h-5" />
+                      {isAnalyzing ? 'ANALYZING...' : 'ANALYZE COURSE LOAD'}
+                  </button>
+                  <button
+                      onClick={() => onViewTimetable(selectedCourses)}
+                      className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
+                  >
+                      View My Timetable
+                  </button>
+              </div>
+          )}
+        </div>
+
+        {/* Available Courses Modal (Unchanged) */}
+        {showAvailableCourses && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+                    <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+                        <h3 className="text-2xl font-bold text-slate-800">
+                            Available Courses - {selectedBranch === 'ALL' ? 'All Branches' : selectedBranch}
+                        </h3>
+                        <button
+                            onClick={() => setShowAvailableCourses(false)}
+                            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                        >
+                            <X className="w-6 h-6 text-slate-600" />
+                        </button>
                     </div>
-
-                    {/* Action Buttons */}
-                    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <button
-                            // This modal still shows ALL courses in the branch, regardless of time filter, 
-                            // to let the user see what is available outside their preferred hours.
-                            onClick={() => setShowAvailableCourses(true)}
-                            disabled={!selectedBranch}
-                            className="bg-white border-2 border-blue-500 text-blue-600 font-bold py-3 px-6 rounded-xl transition-all hover:bg-blue-50 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <BookOpen className="w-5 h-5" />
-                            All Courses ({selectedBranch})
-                        </button>
-                        <button
-                            onClick={() => setShowRecommendations(true)}
-                            disabled={selectedCourses.length === 0}
-                            className="bg-white border-2 border-blue-500 text-blue-600 font-bold py-3 px-6 rounded-xl transition-all hover:bg-blue-50 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <Lightbulb className="w-5 h-5" />
-                            Recommendations
-                        </button>
-                        
-                        
-                        
-                        {/* Time Filter Button */}
-                        <div className="md:col-span-2">
-                             <div className='flex gap-4 items-center justify-center'>
-                                <button
-                                    onClick={() => setShowFilterModal(true)}
-                                    className={`flex-1 border-2 font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 text-sm ${
-                                        timeFilter ? 'bg-orange-100 border-orange-500 text-orange-700 hover:bg-orange-200' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
-                                    }`}
+                    <div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)]">
+                        <div className="space-y-3">
+                            {courses.filter(c => selectedBranch === 'ALL' || c.branch === selectedBranch).map(course => (
+                                <div
+                                    key={course.course_code}
+                                    className="p-4 border-2 border-slate-200 rounded-xl hover:border-blue-400 transition-colors"
                                 >
-                                    <Clock className="w-5 h-5" />
-                                    {timeFilter ? `Filter: ${formatTime(timeFilter.start)} - ${formatTime(timeFilter.end)}` : 'Filter Time'}
-                                </button>
-                                {timeFilter && (
-                                    <button
-                                        onClick={onClearFilter}
-                                        className="p-3 bg-red-100 border border-red-400 text-red-600 rounded-xl hover:bg-red-200 transition-colors"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                )}
-                            </div>
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                            <div className="font-bold text-slate-800">{course.course_code}</div>
+                                            <div className="text-slate-700 mt-1">{course.course_name}</div>
+                                            <div className="text-sm text-slate-500 mt-2">
+                                                Instructor: {course.instructor}
+                                            </div>
+                                        </div>
+                                        <span className="text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">
+                                            {course.credits} credits
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
-
-                    {/* View Timetable Button */}
-                    {selectedCourses.length > 0 && (
-                        <div className="mt-6">
-                            <button
-                                onClick={() => onViewTimetable(selectedCourses)}
-                                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
-                            >
-                                View My Timetable
-                            </button>
-                        </div>
-                    )}
                 </div>
-
-                {/* Available Courses Modal (Existing) */}
-                {showAvailableCourses && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
-                            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-                                <h3 className="text-2xl font-bold text-slate-800">
-                                    Available Courses - {selectedBranch}
-                                </h3>
-                                <button
-                                    onClick={() => setShowAvailableCourses(false)}
-                                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                                >
-                                    <X className="w-6 h-6 text-slate-600" />
-                                </button>
-                            </div>
-                            <div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)]">
-                                <div className="space-y-3">
-                                    {courses.filter(c => c.branch === selectedBranch).map(course => (
-                                        <div
-                                            key={course.course_code}
-                                            className="p-4 border-2 border-slate-200 rounded-xl hover:border-blue-400 transition-colors"
-                                        >
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1">
-                                                    <div className="font-bold text-slate-800">{course.course_code}</div>
-                                                    <div className="text-slate-700 mt-1">{course.course_name}</div>
-                                                    <div className="text-sm text-slate-500 mt-2">
-                                                        Instructor: {course.instructor}
-                                                    </div>
-                                                </div>
-                                                <span className="text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">
-                                                    {course.credits} credits
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-                
-                {/* Recommendations Modal (Existing) */}
-                {showRecommendations && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
-                            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-                                <h3 className="text-2xl font-bold text-slate-800">
-                                    Recommended Courses
-                                </h3>
-                                <button
-                                    onClick={() => setShowRecommendations(false)}
-                                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                                >
-                                    <X className="w-6 h-6 text-slate-600" />
-                                </button>
-                            </div>
-                            <div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)]">
-                                <p className="text-slate-600 mb-4">
-                                    Based on your selected courses, we recommend:
-                                </p>
-                                <div className="space-y-3">
-                                    {getRecommendedCourses().length === 0 ? (
-                                        <div className="text-center text-slate-500 py-8">
-                                            No recommendations available at this time.
-                                        </div>
-                                    ) : (
-                                        getRecommendedCourses().map(course => (
-                                            <div
-                                                key={course.course_code}
-                                                className="p-4 border-2 border-slate-200 rounded-xl hover:border-blue-400 transition-colors"
-                                            >
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex-1">
-                                                        <div className="font-bold text-slate-800">{course.course_code}</div>
-                                                        <div className="text-slate-700 mt-1">{course.course_name}</div>
-                                                        <div className="text-sm text-slate-500 mt-2">
-                                                            Branch: {course.branch} • Instructor: {course.instructor}
-                                                        </div>
-                                                    </div>
-                                                    <span className="text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">
-                                                        {course.credits} credits
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
-            
-            {/* Time Filter Modal (Existing) */}
-            {showFilterModal && (
-                <TimeFilterModal 
-                    onClose={() => setShowFilterModal(false)}
-                    onApply={handleApplyFilter}
-                />
-            )}
-        </>
-    );
+        )}
+        
+        {/* Recommendations Modal (Unchanged) */}
+        {showRecommendations && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+                    <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+                        <h3 className="text-2xl font-bold text-slate-800">
+                            Recommended Courses
+                        </h3>
+                        <button
+                            onClick={() => setShowRecommendations(false)}
+                            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                        >
+                            <X className="w-6 h-6 text-slate-600" />
+                        </button>
+                    </div>
+                    <div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)]">
+                        <p className="text-slate-600 mb-4">
+                            Based on your selected courses, we recommend:
+                        </p>
+                        <div className="space-y-3">
+                            {getRecommendedCourses().length === 0 ? (
+                                <div className="text-center text-slate-500 py-8">
+                                    No recommendations available at this time.
+                                </div>
+                            ) : (
+                                getRecommendedCourses().map(course => (
+                                    <div
+                                        key={course.course_code}
+                                        className="p-4 border-2 border-slate-200 rounded-xl hover:border-blue-400 transition-colors"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <div className="font-bold text-slate-800">{course.course_code}</div>
+                                                <div className="text-slate-700 mt-1">{course.course_name}</div>
+                                                <div className="text-sm text-slate-500 mt-2">
+                                                    Branch: {course.branch} • Instructor: {course.instructor}
+                                                </div>
+                                            </div>
+                                            <span className="text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">
+                                                {course.credits} credits
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+      </div>
+    </>
+  );
 }
 
-// --- 7. MAIN APP COMPONENT (Updated with LLM Logic and File Fetch) ---
+// --- 7. MAIN APP COMPONENT (Updated with new state) ---
 
 export default function App() {
     const [courses, setCourses] = useState<Course[]>([]);
@@ -1077,12 +1193,15 @@ export default function App() {
     const [error, setError] = useState<string | null>(null);
     const [selectedCourses, setSelectedCourses] = useState<Course[]>([]);
     const [showTimetable, setShowTimetable] = useState(false);
-    const [timeFilter, setTimeFilter] = useState<{ start: number; end: number } | null>(null);
+    
+    // --- NEW: Replaced timeFilter with dayTimeFilters ---
+    const [dayTimeFilters, setDayTimeFilters] = useState<DayTimeFilter[]>([]);
+
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisResult, setAnalysisResult] = useState<{ text: string } | null>(null);
     const timetableRef = useRef<HTMLDivElement>(null);
 
-    // --- Course Data Fetch from /courses.json ---
+    // --- Course Data Fetch from /courses.json (Unchanged) ---
     useEffect(() => {
         const fetchCourses = async () => {
             try {
@@ -1132,7 +1251,7 @@ export default function App() {
         fetchCourses();
     }, []);
 
-    // --- LLM Logic (Existing) ---
+    // --- LLM Logic (Unchanged) ---
     const handleAnalyzeCourseLoad = useCallback(async () => {
         if (selectedCourses.length === 0) return;
 
@@ -1220,69 +1339,75 @@ The response must be in Markdown format, highly encouraging, and professional.`;
         setShowTimetable(true);
     };
 
-    const handleTimeFilter = (start: number, end: number) => {
-        setTimeFilter({ start, end });
+    // --- NEW: Filter Handlers ---
+    const handleAddFilter = (day: string, start: number, end: number) => {
+        setDayTimeFilters(prev => [...prev, { id: Date.now(), day, start, end }]);
     };
 
-    const handleClearFilter = () => {
-        setTimeFilter(null);
+    const handleRemoveFilter = (id: number) => {
+        setDayTimeFilters(prev => prev.filter(f => f.id !== id));
     };
 
-const handleDownloadTimetable = () => {
-    // Assuming timetableRef points to the container div that wraps the entire TimetableGrid component
-    if (timetableRef.current && typeof (window as any).html2canvas !== 'undefined') {
-        const element = timetableRef.current;
+    const handleClearAllFilters = () => {
+        setDayTimeFilters([]);
+    };
 
-        // Save original styles and set necessary overrides for capture
-        const originalStyles = {
-            overflow: element.style.overflow,
-            maxWidth: element.style.maxWidth, // Critical if you have a max-width on the container
-        };
-        element.style.overflow = 'visible';
-        element.style.maxWidth = 'unset'; // Remove max-width constraint during capture
 
-        // Find the actual content width/height including scrollable areas
-        const contentWidth = element.scrollWidth;
-        const contentHeight = element.scrollHeight;
+    const handleDownloadTimetable = () => {
+        // Assuming timetableRef points to the container div that wraps the entire TimetableGrid component
+        if (timetableRef.current && typeof (window as any).html2canvas !== 'undefined') {
+            const element = timetableRef.current;
 
-        (window as any).html2canvas(element, {
-            backgroundColor: '#ffffff',
-            scale: 2, // Use scale 2 or 3 for sharper image
-            useCORS: true,
-            // Capture the full scrollable area
-            width: contentWidth,
-            height: contentHeight, 
-            x: 0, 
-            y: 0,
-            ignoreElements: (el: HTMLElement) =>
-                el.classList.contains('group-hover:block') || el.classList.contains('hidden'),
-        })
-            .then((canvas: HTMLCanvasElement) => {
-                const imgData = canvas.toDataURL('image/png');
-                const link = document.createElement('a');
-                link.download = 'timetable.png';
-                link.href = imgData;
-                link.click();
+            // Save original styles and set necessary overrides for capture
+            const originalStyles = {
+                overflow: element.style.overflow,
+                maxWidth: element.style.maxWidth, // Critical if you have a max-width on the container
+            };
+            element.style.overflow = 'visible';
+            element.style.maxWidth = 'unset'; // Remove max-width constraint during capture
 
-                // Restore original styles
-                element.style.overflow = originalStyles.overflow;
-                element.style.maxWidth = originalStyles.maxWidth;
+            // Find the actual content width/height including scrollable areas
+            const contentWidth = element.scrollWidth;
+            const contentHeight = element.scrollHeight;
+
+            (window as any).html2canvas(element, {
+                backgroundColor: '#ffffff',
+                scale: 2, // Use scale 2 or 3 for sharper image
+                useCORS: true,
+                // Capture the full scrollable area
+                width: contentWidth,
+                height: contentHeight, 
+                x: 0, 
+                y: 0,
+                ignoreElements: (el: HTMLElement) =>
+                    el.classList.contains('group-hover:block') || el.classList.contains('hidden'),
             })
-            .catch((err: any) => {
-                console.error('Download failed:', err);
-                setError('Something went wrong while generating the timetable image.');
-                setTimeout(() => setError(null), 5000);
-                
-                // Ensure styles are restored even on failure
-                element.style.overflow = originalStyles.overflow;
-                element.style.maxWidth = originalStyles.maxWidth;
-            });
-    } else {
-        console.error('Download failed. html2canvas not available or ref missing.');
-        setError('Download failed. Required library (html2canvas) not loaded.');
-        setTimeout(() => setError(null), 5000);
-    }
-};
+                .then((canvas: HTMLCanvasElement) => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const link = document.createElement('a');
+                    link.download = 'timetable.png';
+                    link.href = imgData;
+                    link.click();
+
+                    // Restore original styles
+                    element.style.overflow = originalStyles.overflow;
+                    element.style.maxWidth = originalStyles.maxWidth;
+                })
+                .catch((err: any) => {
+                    console.error('Download failed:', err);
+                    setError('Something went wrong while generating the timetable image.');
+                    setTimeout(() => setError(null), 5000);
+                    
+                    // Ensure styles are restored even on failure
+                    element.style.overflow = originalStyles.overflow;
+                    element.style.maxWidth = originalStyles.maxWidth;
+                });
+        } else {
+            console.error('Download failed. html2canvas not available or ref missing.');
+            setError('Download failed. Required library (html2canvas) not loaded.');
+            setTimeout(() => setError(null), 5000);
+        }
+    };
 
 
 
@@ -1295,55 +1420,61 @@ const handleDownloadTimetable = () => {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
             <div className="container mx-auto px-4 py-8">
               <header className="mb-8 text-center space-y-4">
-  {/* Title */}
-  <div className="flex items-center justify-center gap-3 mb-3">
-    <Calendar className="w-10 h-10 text-slate-700" />
-    <h1 className="text-4xl font-bold text-slate-800 font-serif">
-      IITK Course Planner
-    </h1>
-  </div>
+                  {/* Title */}
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <Calendar className="w-10 h-10 text-slate-700" />
+                    <h1 className="text-4xl font-bold text-slate-800 font-serif">
+                      IITK Course Planner
+                    </h1>
+                  </div>
 
-  {/* Subtitle */}
-  <p className="text-slate-600 text-lg">
-    Plan your courses, detect conflicts, and visualize your weekly schedule 🎓
-  </p>
+                  {/* Subtitle */}
+                  <p className="text-slate-600 text-lg">
+                    Plan your courses, detect conflicts, and visualize your weekly schedule 🎓
+                  </p>
 
-  {/* When timetable is visible */}
-  {showTimetable && (
-    <>
-      <p className="text-slate-500 text-sm">
-        Hover over classes for details • Red borders indicate time conflicts
-      </p>
+                  {/* When timetable is visible */}
+                  {showTimetable && (
+                    <>
+                      <p className="text-slate-500 text-sm">
+                        Hover over classes for details • Red borders indicate time conflicts
+                      </p>
 
-      {/* Conflict summary */}
-      {conflictPairs && conflictPairs.length > 0 && (
-        <div className="mt-3 inline-block bg-red-100 text-red-800 border border-red-400 px-4 py-2 rounded-lg shadow-sm font-medium">
-          ⚠️ {conflictPairs.length} conflict{conflictPairs.length > 1 ? 's' : ''} detected — 
-          check overlapping courses at the top of the timetable.
-        </div>
-      )}
+                      {/* Conflict summary */}
+                      {conflictPairs.size > 0 && (
+                        <div className="mt-3 inline-block bg-red-100 text-red-800 border border-red-400 px-4 py-2 rounded-lg shadow-sm font-medium">
+                          ⚠️ {conflictPairs.size} conflict{conflictPairs.size > 1 ? 's' : ''} detected — 
+                          check overlapping courses at the top of the timetable.
+                        </div>
+                      )}
 
-      {/* Header buttons */}
-      <div className="mt-5 flex justify-center gap-3">
-        <button
-          onClick={handleDownloadTimetable}
-          className="px-4 py-2 rounded-xl bg-green-500 text-white hover:bg-green-600 transition-all font-semibold shadow-md"
-        >
-          ⬇️ Download Timetable
-        </button>
-        <button
-          onClick={() => {
-            setSelectedCourses([]);
-            setShowTimetable(false);
-          }}
-          className="px-4 py-2 rounded-xl bg-slate-500 text-white hover:bg-slate-600 transition-all font-semibold shadow-md"
-        >
-          🧹 Clear All
-        </button>
-      </div>
-    </>
-  )}
-</header>
+                      {/* Header buttons */}
+                      <div className="mt-5 flex justify-center gap-3">
+                        <button
+                          onClick={() => setShowTimetable(false)}
+                          className="px-4 py-2 rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition-all font-semibold shadow-md"
+                        >
+                          ⬅️ Back to Selector
+                        </button>
+                        <button
+                          onClick={handleDownloadTimetable}
+                          className="px-4 py-2 rounded-xl bg-green-500 text-white hover:bg-green-600 transition-all font-semibold shadow-md"
+                        >
+                          <Download className="w-4 h-4 inline-block mr-1" /> Download
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedCourses([]);
+                            setShowTimetable(false);
+                          }}
+                          className="px-4 py-2 rounded-xl bg-slate-500 text-white hover:bg-slate-600 transition-all font-semibold shadow-md"
+                        >
+                          <Trash2 className="w-4 h-4 inline-block mr-1" /> Clear All
+                        </button>
+                      </div>
+                    </>
+                  )}
+            </header>
 
 
                 {loading && <div className="text-center text-slate-600 py-20">Loading courses...</div>}
@@ -1351,25 +1482,48 @@ const handleDownloadTimetable = () => {
 
                 {!loading && courses.length > 0 && (
                     <div className="space-y-12">
-                        <CourseSelector
-                            courses={courses}
-                            onViewTimetable={handleViewTimetable}
-                            onFilterTime={handleTimeFilter}
-                            onClearFilter={handleClearFilter}
-                            timeFilter={timeFilter}
-                            onAnalyze={handleAnalyzeCourseLoad}
-                            isAnalyzing={isAnalyzing}
-                        />
+                        
+                        {/* Show Selector only if timetable is hidden */}
+                        {!showTimetable && (
+                            <CourseSelector
+                                courses={courses}
+                                onViewTimetable={handleViewTimetable}
+                                // NEW Props
+                                dayTimeFilters={dayTimeFilters}
+                                onAddFilter={handleAddFilter}
+                                onRemoveFilter={handleRemoveFilter}
+                                onClearAllFilters={handleClearAllFilters}
+                                // Analysis Props (FIXED)
+                                onAnalyze={handleAnalyzeCourseLoad}
+                                isAnalyzing={isAnalyzing}
+                            />
+                        )}
 
+                        {/* Show Timetable only if visible and courses are selected */}
                         {showTimetable && selectedCourses.length > 0 && (
                             <div className="bg-white rounded-2xl shadow-xl p-8">
                                 <h2 className="text-2xl font-bold text-slate-800 mb-6 text-center">My Timetable</h2>
                                <TimetableGrid 
-    courses={selectedCourses}
-    gridRef={timetableRef}
-    conflictPairs={conflictPairs}
-    onDownload={handleDownloadTimetable}
-/>
+                                    courses={selectedCourses}
+                                    gridRef={timetableRef}
+                                    dayTimeFilters={dayTimeFilters}
+                                    conflictPairs={conflictPairs}
+                                    onDownload={handleDownloadTimetable}
+                                />
+                            </div>
+                        )}
+                        
+                        {/* Handle case where user hits "View" with 0 courses */}
+                        {showTimetable && selectedCourses.length === 0 && (
+                             <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+                                <h2 className="text-2xl font-bold text-slate-800 mb-4">Empty Timetable</h2>
+                                <p className="text-slate-600 mb-6">You haven't selected any courses to display.</p>
+                                <button
+                                    onClick={() => setShowTimetable(false)}
+                                    className="px-4 py-2 rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition-all font-semibold shadow-md"
+                                >
+                                  ⬅️ Back to Selector
+                                </button>
                             </div>
                         )}
                     </div>
