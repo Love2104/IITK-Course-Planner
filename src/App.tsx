@@ -660,217 +660,236 @@ const CourseLoadAnalysisModal = ({ analysis, onClose }: AnalysisModalProps) => {
 
 
 // --- 6. COURSE SELECTOR COMPONENT (Integrated) ---
+function CourseSelector({
+  courses,
+  onViewTimetable,
+  onFilterTime,
+  onClearFilter,
+  timeFilter,
+  onAnalyze,
+  isAnalyzing,
+}: CourseSelectorProps) {
+  const [selectedBranch, setSelectedBranch] = useState<string>(''); // placeholder by default
+  const [selectedCourseCode, setSelectedCourseCode] = useState<string>('');
+  const [selectedCourses, setSelectedCourses] = useState<Course[]>([]);
+  const [showAvailableCourses, setShowAvailableCourses] = useState(false);
+  const [showRecommendations, setShowRecommendations] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
-interface CourseSelectorProps {
-    courses: Course[];
-    onViewTimetable: (selectedCourses: Course[]) => void;
-    onFilterTime: (start: number, end: number) => void;
-    onClearFilter: () => void;
-    timeFilter: { start: number; end: number } | null;
-    // New props for LLM feature
-    onAnalyze: () => void;
-    isAnalyzing: boolean;
-}
+  // Keep only real branches here (we’ll inject “All Branches” in the UI)
+  const branches = useMemo(() => {
+    const uniqueBranches = Array.from(new Set(courses.map(c => c.branch))).sort();
+    return uniqueBranches;
+  }, [courses]);
 
-function CourseSelector({ courses, onViewTimetable, onFilterTime, onClearFilter, timeFilter, onAnalyze, isAnalyzing }: CourseSelectorProps) {
-    const [selectedBranch, setSelectedBranch] = useState<string>('');
-    const [selectedCourseCode, setSelectedCourseCode] = useState<string>('');
-    const [selectedCourses, setSelectedCourses] = useState<Course[]>([]);
-    const [showAvailableCourses, setShowAvailableCourses] = useState(false);
-    const [showRecommendations, setShowRecommendations] = useState(false);
-    const [showFilterModal, setShowFilterModal] = useState(false);
+  /**
+   * UPDATED:
+   * - If selectedBranch === 'ALL' -> use all courses
+   * - Else if empty -> []
+   * - Else -> only that branch
+   * - Apply timeFilter in all cases where list is non-empty
+   */
+  const filteredCourses = useMemo(() => {
+    if (!selectedBranch) return [];
 
-    const branches = useMemo(() => {
-        const uniqueBranches = Array.from(new Set(courses.map(c => c.branch))).sort();
-        return uniqueBranches;
-    }, [courses]);
+    let list =
+      selectedBranch === 'ALL'
+        ? courses
+        : courses.filter(c => c.branch === selectedBranch);
 
-    /**
-     * UPDATED: Now applies the timeFilter to the courses displayed in the dropdowns.
-     */
-    const filteredCourses = useMemo(() => {
-        if (!selectedBranch) return [];
-        
-        let coursesByBranch = courses.filter(c => c.branch === selectedBranch);
+    if (timeFilter) {
+      list = list.filter(course => isCourseWithinTimeRange(course, timeFilter));
+    }
 
-        // Apply time filter if it exists
-        if (timeFilter) {
-            coursesByBranch = coursesByBranch.filter(course => 
-                isCourseWithinTimeRange(course, timeFilter)
-            );
-        }
+    return list;
+  }, [courses, selectedBranch, timeFilter]);
 
-        return coursesByBranch;
-    }, [courses, selectedBranch, timeFilter]);
+  const totalCredits = useMemo(
+    () => selectedCourses.reduce((sum, course) => sum + course.credits, 0),
+    [selectedCourses]
+  );
 
-    const totalCredits = useMemo(() => {
-        return selectedCourses.reduce((sum, course) => sum + course.credits, 0);
-    }, [selectedCourses]);
+  const handleBranchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedBranch(e.target.value);
+    setSelectedCourseCode('');
+  };
 
-    const handleBranchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedBranch(e.target.value);
-        setSelectedCourseCode('');
-    };
+  const handleCourseChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedCourseCode(e.target.value);
+  };
 
-    const handleCourseChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedCourseCode(e.target.value);
-    };
+  const handleAddCourse = () => {
+    if (!selectedCourseCode) return;
 
-    const handleAddCourse = () => {
-        if (!selectedCourseCode) return;
+    const courseToAdd = courses.find(c => c.course_code === selectedCourseCode);
+    if (!courseToAdd) return;
 
-        const courseToAdd = courses.find(c => c.course_code === selectedCourseCode);
-        if (!courseToAdd) return;
+    const alreadyAdded = selectedCourses.some(c => c.course_code === selectedCourseCode);
+    if (alreadyAdded) {
+      console.error('This course is already added!');
+      return;
+    }
 
-        const alreadyAdded = selectedCourses.some(c => c.course_code === selectedCourseCode);
-        if (alreadyAdded) {
-            console.error('This course is already added!');
-            return;
-        }
+    setSelectedCourses(prev => [...prev, courseToAdd]);
+    setSelectedCourseCode('');
+  };
 
-        setSelectedCourses([...selectedCourses, courseToAdd]);
-        setSelectedCourseCode('');
-    };
+  const handleRemoveCourse = (courseCode: string) => {
+    setSelectedCourses(prev => prev.filter(c => c.course_code !== courseCode));
+  };
 
-    const handleRemoveCourse = (courseCode: string) => {
-        setSelectedCourses(selectedCourses.filter(c => c.course_code !== courseCode));
-    };
+  const handleReset = () => {
+    setSelectedBranch(''); // back to placeholder
+    setSelectedCourseCode('');
+    setSelectedCourses([]);
+    onClearFilter();
+  };
 
-    const handleReset = () => {
-        setSelectedBranch('');
-        setSelectedCourseCode('');
-        setSelectedCourses([]);
-        onClearFilter();
-    };
+  const getRecommendedCourses = () => {
+    if (selectedCourses.length === 0) return [];
 
-    const getRecommendedCourses = () => {
-        if (selectedCourses.length === 0) return [];
+    const keywords = new Set<string>();
+    selectedCourses.forEach(course => {
+      const words = course.course_name.toLowerCase().split(/\s+/);
+      words.forEach(word => {
+        if (word.length > 4) keywords.add(word);
+      });
+    });
 
-        const keywords = new Set<string>();
-        selectedCourses.forEach(course => {
-            const words = course.course_name.toLowerCase().split(/\s+/);
-            words.forEach(word => {
-                if (word.length > 4) keywords.add(word);
-            });
-        });
+    return courses
+      .filter(course => {
+        if (selectedCourses.some(sc => sc.course_code === course.course_code)) return false;
+        const courseName = course.course_name.toLowerCase();
+        return Array.from(keywords).some(keyword => courseName.includes(keyword));
+      })
+      .slice(0, 10);
+  };
 
-        return courses.filter(course => {
-            if (selectedCourses.some(sc => sc.course_code === course.course_code)) return false;
+  const handleApplyFilter = (start: string, end: string) => {
+    const startMin = timeToMinutes(start);
+    const endMin = timeToMinutes(end);
+    onFilterTime(startMin, endMin);
+  };
 
-            const courseName = course.course_name.toLowerCase();
-            return Array.from(keywords).some(keyword => courseName.includes(keyword));
-        }).slice(0, 10);
-    };
-    
-    const handleApplyFilter = (start: string, end: string) => {
-        const startMin = timeToMinutes(start);
-        const endMin = timeToMinutes(end);
-        onFilterTime(startMin, endMin);
-    };
+  return (
+    <>
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <h2 className="text-3xl font-bold text-slate-800 mb-8 text-center">
+            Select Your Courses
+          </h2>
 
-    return (
-        <>
-            <div className="max-w-4xl mx-auto">
-                <div className="bg-white rounded-2xl shadow-xl p-8">
-                    <h2 className="text-3xl font-bold text-slate-800 mb-8 text-center">
-                        Select Your Courses
-                    </h2>
+          <div className="space-y-6">
+            {/* Branch Selection */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Select Branch
+              </label>
+              <select
+                value={selectedBranch}
+                onChange={handleBranchChange}
+                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              >
+                <option value="">Select Branch</option>
+                {/* ✅ Added this option */}
+                <option value="ALL">All Branches</option>
+                {branches.map(branch => (
+                  <option key={branch} value={branch}>
+                    {branch}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                    <div className="space-y-6">
-                        {/* Branch Selection */}
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                Select Branch
-                            </label>
-                            <select
-                                value={selectedBranch}
-                                onChange={handleBranchChange}
-                                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            >
-                                <option value="">Select Branch</option>
-                                {branches.map(branch => (
-                                    <option key={branch} value={branch}>
-                                        {branch}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+            {/* Course Selection (Filtered by branch + time) */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Select Course {timeFilter && (
+                  <span className="text-sm text-orange-600 font-normal"> (Filtered by time)</span>
+                )}
+              </label>
+              <select
+                value={selectedCourseCode}
+                onChange={handleCourseChange}
+                disabled={!selectedBranch}
+                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="">Select Course</option>
+                {filteredCourses.map(course => (
+                  <option key={course.course_code} value={course.course_code}>
+                    {course.course_code} - {course.course_name}
+                  </option>
+                ))}
+                {filteredCourses.length === 0 && selectedBranch && (
+                  <option value="" disabled>
+                    No courses available in this branch/time filter.
+                  </option>
+                )}
+              </select>
+            </div>
 
-                        {/* Course Selection (Now filtered by time) */}
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                Select Course {timeFilter && (<span className='text-sm text-orange-600 font-normal'> (Filtered by time)</span>)}
-                            </label>
-                            <select
-                                value={selectedCourseCode}
-                                onChange={handleCourseChange}
-                                disabled={!selectedBranch}
-                                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <option value="">Select Course</option>
-                                {filteredCourses.map(course => (
-                                    <option key={course.course_code} value={course.course_code}>
-                                        {course.course_code} - {course.course_name}
-                                    </option>
-                                ))}
-                                {filteredCourses.length === 0 && selectedBranch && (
-                                    <option value="" disabled>No courses available in this branch/time filter.</option>
-                                )}
-                            </select>
-                        </div>
+            <div className="flex gap-4">
+              <button
+                onClick={handleAddCourse}
+                disabled={!selectedCourseCode}
+                className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-300 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg disabled:cursor-not-allowed"
+              >
+                <Plus className="w-5 h-5" />
+                ADD
+              </button>
+              <button
+                onClick={handleReset}
+                className="flex-1 bg-slate-500 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+              >
+                <RotateCcw className="w-5 h-5" />
+                RESET
+              </button>
+            </div>
+          </div>
 
-                        <div className="flex gap-4">
-                            <button
-                                onClick={handleAddCourse}
-                                disabled={!selectedCourseCode}
-                                className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-300 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg disabled:cursor-not-allowed"
-                            >
-                                <Plus className="w-5 h-5" />
-                                ADD
-                            </button>
-                            <button
-                                onClick={handleReset}
-                                className="flex-1 bg-slate-500 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-                            >
-                                <RotateCcw className="w-5 h-5" />
-                                RESET
-                            </button>
-                        </div>
+          {/* Selected Courses List */}
+          {selectedCourses.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                Selected Courses ({selectedCourses.length})
+              </h3>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                {selectedCourses.map(course => (
+                  <div
+                    key={course.course_code}
+                    className="flex items-center justify-between bg-slate-50 rounded-xl p-4 border-2 border-slate-200"
+                  >
+                    <div className="flex-1">
+                      <div className="font-semibold text-slate-800">
+                        {course.course_code}
+                      </div>
+                      <div className="text-sm text-slate-600">{course.course_name}</div>
+                      <div className="text-sm text-slate-500">{course.instructor}</div>
                     </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm font-bold text-blue-600">
+                        {course.credits} cr
+                      </span>
+                      <button
+                        onClick={() => handleRemoveCourse(course.course_code)}
+                        className="p-2 hover:bg-red-100 rounded-lg transition-colors"
+                      >
+                        <X className="w-5 h-5 text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-                    {/* Selected Courses List */}
-                    {selectedCourses.length > 0 && (
-                        <div className="mt-8">
-                            <h3 className="text-lg font-semibold text-slate-800 mb-4">Selected Courses ({selectedCourses.length})</h3>
-                            <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                                {selectedCourses.map(course => (
-                                    <div
-                                        key={course.course_code}
-                                        className="flex items-center justify-between bg-slate-50 rounded-xl p-4 border-2 border-slate-200"
-                                    >
-                                        <div className="flex-1">
-                                            <div className="font-semibold text-slate-800">
-                                                {course.course_code}
-                                            </div>
-                                            <div className="text-sm text-slate-600">{course.course_name}</div>
-                                            <div className="text-sm text-slate-500">{course.instructor}</div>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-sm font-bold text-blue-600">
-                                                {course.credits} cr
-                                            </span>
-                                            <button
-                                                onClick={() => handleRemoveCourse(course.course_code)}
-                                                className="p-2 hover:bg-red-100 rounded-lg transition-colors"
-                                            >
-                                                <X className="w-5 h-5 text-red-500" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+          {/* Credit Summary
+          <div className="mt-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 text-white">
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-semibold">Total Credits</span>
+              <span className="text-4xl font-bold">{totalCredits.toString().padStart(2, '0')}</span>
+            </div>
+            <div className="mt-2 text-sm text-blue-100 text-center"> */}
 
                     {/* Credit Summary */}
                     <div className="mt-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 text-white">
