@@ -435,8 +435,8 @@ function TimetableGrid({ courses, dayTimeFilters, gridRef, conflictPairs, onDown
                 </div>
             )}
             
-            {/* Download Button (Requirement 2) */}
-            <div className='flex justify-end mb-4'>
+            {/* Download Button (Requirement 2) - This is now in the main App header */}
+            {/* <div className='flex justify-end mb-4'>
                 <button
                     onClick={onDownload}
                     className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl transition-all shadow-md flex items-center gap-2 text-sm"
@@ -445,6 +445,7 @@ function TimetableGrid({ courses, dayTimeFilters, gridRef, conflictPairs, onDown
                     Download Timetable (PNG)
                 </button>
             </div>
+            */}
 
 
             <div ref={gridRef} className="min-w-[800px] bg-white rounded-lg shadow-xl border border-gray-200" id="timetable-grid">
@@ -616,8 +617,12 @@ const CourseLoadAnalysisModal = ({ analysis, onClose }: AnalysisModalProps) => {
 
 interface CourseSelectorProps {
     courses: Course[];
-    onViewTimetable: (selectedCourses: Course[]) => void;
-    // NEW Filter Props
+    // NEW: Receive selected courses and handlers from parent
+    selectedCourses: Course[];
+    onAddCourse: (course: Course) => void;
+    onRemoveCourse: (courseCode: string) => void;
+    onReset: () => void;
+    // Day/Time Filter Props
     dayTimeFilters: DayTimeFilter[];
     onAddFilter: (day: string, start: number, end: number) => void;
     onRemoveFilter: (id: number) => void;
@@ -630,7 +635,10 @@ interface CourseSelectorProps {
 
 function CourseSelector({
   courses,
-  onViewTimetable,
+  selectedCourses, // NEW: From props
+  onAddCourse,     // NEW: From props
+  onRemoveCourse,  // NEW: From props
+  onReset,         // NEW: From props
   dayTimeFilters,
   onAddFilter,
   onRemoveFilter,
@@ -638,10 +646,12 @@ function CourseSelector({
   onAnalyze,
   isAnalyzing,
 }: CourseSelectorProps) {
+  // Local state for controlling the dropdowns
   const [selectedBranch, setSelectedBranch] = useState<string>(''); // placeholder by default
   const [selectedCourseType, setSelectedCourseType] = useState<string>('ALL'); 
   const [selectedCourseCode, setSelectedCourseCode] = useState<string>('');
-  const [selectedCourses, setSelectedCourses] = useState<Course[]>([]);
+  
+  // Local state for modals
   const [showAvailableCourses, setShowAvailableCourses] = useState(false);
   const [showRecommendations, setShowRecommendations] = useState(false);
 
@@ -657,7 +667,20 @@ function CourseSelector({
   }, [courses]);
   
   const courseTypes = useMemo(() => {
-      const uniqueTypes = Array.from(new Set(courses.map(c => c.course_type))).sort();
+      // ⭐ FIX: Base the course types on the *original* full course list, not the de-duplicated one
+      // This logic is now correct as it receives the full `courses` prop.
+      // But the `courses.json` has combined types like "DC,Minor / REGULAR".
+      // Let's split them to make the filter more useful.
+      const allTypes = new Set<string>();
+      courses.forEach(c => {
+          c.course_type.split(',').forEach(t => {
+              const trimmedType = t.split('/')[0].trim(); // "DC,Minor / REGULAR" -> "DC" and "Minor"
+              if (trimmedType && trimmedType !== 'nan') {
+                allTypes.add(trimmedType);
+              }
+          });
+      });
+      const uniqueTypes = Array.from(allTypes).sort();
       return ['ALL', ...uniqueTypes];
   }, [courses]);
 
@@ -676,10 +699,10 @@ function CourseSelector({
             ? courses
             : courses.filter(c => c.branch === selectedBranch);
 
-    // 2. Filter by Course Type
+    // 2. Filter by Course Type (⭐ UPDATED to handle split types)
     filtered = (selectedCourseType === 'ALL')
         ? filtered
-        : filtered.filter(c => c.course_type === selectedCourseType);
+        : filtered.filter(c => c.course_type.includes(selectedCourseType)); // "DC,Minor / REGULAR" includes "DC"
 
     // 3. Apply new Day/Time filters
     if (dayTimeFilters.length > 0) {
@@ -703,7 +726,7 @@ function CourseSelector({
       }
       
       for (const course of filteredCourses) {
-          // Don't check against itself
+          // Don't check against itself if it's already selected
           const alreadySelected = selectedCourses.some(sc => sc.course_code === course.course_code);
           if (alreadySelected) continue;
 
@@ -741,6 +764,7 @@ function CourseSelector({
     const courseToAdd = courses.find(c => c.course_code === selectedCourseCode);
     if (!courseToAdd) return;
 
+    // Check if already in the parent's list
     const alreadyAdded = selectedCourses.some(c => c.course_code === selectedCourseCode);
     if (alreadyAdded) {
       alert('This course is already in your selected list.');
@@ -754,21 +778,24 @@ function CourseSelector({
             return;
         }
     }
-
-    setSelectedCourses(prev => [...prev, courseToAdd]);
+    
+    // Call parent handler
+    onAddCourse(courseToAdd);
     setSelectedCourseCode('');
   };
 
   const handleRemoveCourse = (courseCode: string) => {
-    setSelectedCourses(prev => prev.filter(c => c.course_code !== courseCode));
+    // Call parent handler
+    onRemoveCourse(courseCode);
   };
 
   const handleReset = () => {
-    setSelectedBranch(''); // back to placeholder
+    // Reset local state
+    setSelectedBranch('');
     setSelectedCourseType('ALL');
     setSelectedCourseCode('');
-    setSelectedCourses([]);
-    onClearAllFilters(); // Use the new clear all function
+    // Call parent handler to reset global state
+    onReset();
   };
 
   // --- NEW: Handler for the new filter form ---
@@ -961,8 +988,7 @@ function CourseSelector({
                             key={course.course_code} 
                             value={course.course_code}
                             // Styling <option> is limited. Prefixing is the most reliable way.
-                            // We use CSS to style the <select> itself if a clashing option is chosen
-                            className={hasClash ? 'text-red-700 bg-red-50' : 'text-green-700'}
+                            style={hasClash ? { color: '#b91c1c', fontWeight: 'bold' } : {}}
                         >
                             {hasClash 
                                 ? `🔴 ${course.course_code} - ${course.course_name} (Clashes with: ${clashes.join(', ')})`
@@ -1055,7 +1081,7 @@ function CourseSelector({
                   className="bg-white border-2 border-blue-500 text-blue-600 font-bold py-3 px-6 rounded-xl transition-all hover:bg-blue-50 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                   <BookOpen className="w-5 h-5" />
-                  All Courses ({selectedBranch === 'ALL' ? 'All' : selectedBranch})
+                  All Courses ({selectedBranch === 'ALL' || !selectedBranch ? 'All' : selectedBranch})
               </button>
               <button
                   onClick={() => setShowRecommendations(true)}
@@ -1067,22 +1093,16 @@ function CourseSelector({
               </button>
           </div>
 
-          {/* View Timetable & Analyze Buttons */}
+          {/* Analyze Button (Timetable button removed) */}
           {selectedCourses.length > 0 && (
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mt-6">
                   <button
                       onClick={onAnalyze}
                       disabled={isAnalyzing}
-                      className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="w-full bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                       <Zap className="w-5 h-5" />
                       {isAnalyzing ? 'ANALYZING...' : 'ANALYZE COURSE LOAD'}
-                  </button>
-                  <button
-                      onClick={() => onViewTimetable(selectedCourses)}
-                      className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
-                  >
-                      View My Timetable
                   </button>
               </div>
           )}
@@ -1094,7 +1114,7 @@ function CourseSelector({
                 <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
                     <div className="p-6 border-b border-slate-200 flex items-center justify-between">
                         <h3 className="text-2xl font-bold text-slate-800">
-                            Available Courses - {selectedBranch === 'ALL' ? 'All Branches' : selectedBranch}
+                            Available Courses - {selectedBranch === 'ALL' || !selectedBranch ? 'All Branches' : selectedBranch}
                         </h3>
                         <button
                             onClick={() => setShowAvailableCourses(false)}
@@ -1105,7 +1125,7 @@ function CourseSelector({
                     </div>
                     <div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)]">
                         <div className="space-y-3">
-                            {courses.filter(c => selectedBranch === 'ALL' || c.branch === selectedBranch).map(course => (
+                            {courses.filter(c => selectedBranch === 'ALL' || !selectedBranch || c.branch === selectedBranch).map(course => (
                                 <div
                                     key={course.course_code}
                                     className="p-4 border-2 border-slate-200 rounded-xl hover:border-blue-400 transition-colors"
@@ -1185,23 +1205,24 @@ function CourseSelector({
   );
 }
 
-// --- 7. MAIN APP COMPONENT (Updated with new state) ---
+// --- 7. MAIN APP COMPONENT (Updated with new state and logic) ---
 
 export default function App() {
     const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedCourses, setSelectedCourses] = useState<Course[]>([]);
-    const [showTimetable, setShowTimetable] = useState(false);
     
-    // --- NEW: Replaced timeFilter with dayTimeFilters ---
+    // --- STATE LIFTED UP ---
+    const [selectedCourses, setSelectedCourses] = useState<Course[]>([]);
     const [dayTimeFilters, setDayTimeFilters] = useState<DayTimeFilter[]>([]);
-
+    
+    // Removed `showTimetable` state
+    
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisResult, setAnalysisResult] = useState<{ text: string } | null>(null);
     const timetableRef = useRef<HTMLDivElement>(null);
 
-    // --- Course Data Fetch from /courses.json (Unchanged) ---
+    // --- Course Data Fetch from /courses.json (MODIFIED) ---
     useEffect(() => {
         const fetchCourses = async () => {
             try {
@@ -1216,8 +1237,20 @@ export default function App() {
                 if (!Array.isArray(data) || data.length === 0) {
                      throw new Error("The loaded JSON is empty or not an array.");
                 }
+                
+                // --- ⭐ FIX: De-duplication Logic ---
+                // The courses.json file has duplicate entries for the same course code.
+                // We will create a unique list of courses based on the 'course_code'.
+                const uniqueCourseMap = new Map<string, Course>();
+                for (const course of data) {
+                    if (!uniqueCourseMap.has(course.course_code)) {
+                        uniqueCourseMap.set(course.course_code, course);
+                    }
+                }
+                const uniqueCourses = Array.from(uniqueCourseMap.values());
+                // --- End of De-duplication ---
 
-                setCourses(data);
+                setCourses(uniqueCourses); // Use the de-duplicated list
                 setError(null);
             } catch (err) {
                 console.error("Failed to load courses.json:", err);
@@ -1227,7 +1260,12 @@ export default function App() {
                     { "branch": "PH", "course_name": "QUANTUM MECHANICS I", "course_code": "PH401", "slot": "B1", "credits": 9, "course_type": "DC", "instructor": "B. Fallback", "instructor_email": "b.f@iitk.ac.in", "lecture_schedule": "MWF 11:00-12:00", "tutorial_schedule": "nan", "practical_schedule": "nan" },
                     { "branch": "CE", "course_name": "STRUCTURAL ANALYSIS", "course_code": "CE343", "slot": "C1", "credits": 10, "course_type": "DC", "instructor": "C. Fallback", "instructor_email": "c.f@iitk.ac.in", "lecture_schedule": "MW 13:00-14:30", "tutorial_schedule": "nan", "practical_schedule": "nan" },
                 ];
-                setCourses(minimalFallback);
+                
+                // Also de-duplicate the fallback
+                const uniqueFallbackMap = new Map<string, Course>();
+                minimalFallback.forEach(c => uniqueFallbackMap.set(c.course_code, c));
+                
+                setCourses(Array.from(uniqueFallbackMap.values()));
                 setError(`Failed to load course data from /courses.json. Using minimal fallback data. Error: ${err.message}.`);
             } finally {
                 setLoading(false);
@@ -1333,10 +1371,21 @@ The response must be in Markdown format, highly encouraging, and professional.`;
 
     }, [selectedCourses]);
 
+    // --- NEW: Handlers for lifted state ---
 
-    const handleViewTimetable = (selected: Course[]) => {
-        setSelectedCourses(selected);
-        setShowTimetable(true);
+    const handleAddCourse = (course: Course) => {
+        setSelectedCourses(prev => [...prev, course]);
+    };
+
+    const handleRemoveCourse = (courseCode: string) => {
+        setSelectedCourses(prev => prev.filter(c => c.course_code !== courseCode));
+    };
+
+    const handleReset = () => {
+        setSelectedCourses([]);
+        setDayTimeFilters([]);
+        // also reset analysis
+        setAnalysisResult(null);
     };
 
     // --- NEW: Filter Handlers ---
@@ -1412,9 +1461,9 @@ The response must be in Markdown format, highly encouraging, and professional.`;
 
 
     const { conflictPairs } = useMemo(() => {
-        if (!showTimetable || selectedCourses.length === 0) return { conflictPairs: new Set<string>() };
+        // Recalculate conflicts only when selectedCourses changes
         return detectConflicts(selectedCourses);
-    }, [selectedCourses, showTimetable]);
+    }, [selectedCourses]);
     
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -1433,8 +1482,9 @@ The response must be in Markdown format, highly encouraging, and professional.`;
                     Plan your courses, detect conflicts, and visualize your weekly schedule 🎓
                   </p>
 
-                  {/* When timetable is visible */}
-                  {showTimetable && (
+                  {/* --- MODIFIED HEADER --- */}
+                  {/* Show controls only if courses are selected */}
+                  {selectedCourses.length > 0 && (
                     <>
                       <p className="text-slate-500 text-sm">
                         Hover over classes for details • Red borders indicate time conflicts
@@ -1451,22 +1501,13 @@ The response must be in Markdown format, highly encouraging, and professional.`;
                       {/* Header buttons */}
                       <div className="mt-5 flex justify-center gap-3">
                         <button
-                          onClick={() => setShowTimetable(false)}
-                          className="px-4 py-2 rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition-all font-semibold shadow-md"
-                        >
-                          ⬅️ Back to Selector
-                        </button>
-                        <button
                           onClick={handleDownloadTimetable}
                           className="px-4 py-2 rounded-xl bg-green-500 text-white hover:bg-green-600 transition-all font-semibold shadow-md"
                         >
                           <Download className="w-4 h-4 inline-block mr-1" /> Download
                         </button>
                         <button
-                          onClick={() => {
-                            setSelectedCourses([]);
-                            setShowTimetable(false);
-                          }}
+                          onClick={handleReset} // Use the main reset handler
                           className="px-4 py-2 rounded-xl bg-slate-500 text-white hover:bg-slate-600 transition-all font-semibold shadow-md"
                         >
                           <Trash2 className="w-4 h-4 inline-block mr-1" /> Clear All
@@ -1483,24 +1524,26 @@ The response must be in Markdown format, highly encouraging, and professional.`;
                 {!loading && courses.length > 0 && (
                     <div className="space-y-12">
                         
-                        {/* Show Selector only if timetable is hidden */}
-                        {!showTimetable && (
-                            <CourseSelector
-                                courses={courses}
-                                onViewTimetable={handleViewTimetable}
-                                // NEW Props
-                                dayTimeFilters={dayTimeFilters}
-                                onAddFilter={handleAddFilter}
-                                onRemoveFilter={handleRemoveFilter}
-                                onClearAllFilters={handleClearAllFilters}
-                                // Analysis Props (FIXED)
-                                onAnalyze={handleAnalyzeCourseLoad}
-                                isAnalyzing={isAnalyzing}
-                            />
-                        )}
+                        {/* Selector is ALWAYS visible */}
+                        <CourseSelector
+                            courses={courses}
+                            // Pass state and handlers down
+                            selectedCourses={selectedCourses}
+                            onAddCourse={handleAddCourse}
+                            onRemoveCourse={handleRemoveCourse}
+                            onReset={handleReset}
+                            // Pass filter state and handlers
+                            dayTimeFilters={dayTimeFilters}
+                            onAddFilter={handleAddFilter}
+                            onRemoveFilter={handleRemoveFilter}
+                            onClearAllFilters={handleClearAllFilters}
+                            // Pass analysis props
+                            onAnalyze={handleAnalyzeCourseLoad}
+                            isAnalyzing={isAnalyzing}
+                        />
 
-                        {/* Show Timetable only if visible and courses are selected */}
-                        {showTimetable && selectedCourses.length > 0 && (
+                        {/* Timetable is visible ONLY if courses are selected */}
+                        {selectedCourses.length > 0 && (
                             <div className="bg-white rounded-2xl shadow-xl p-8">
                                 <h2 className="text-2xl font-bold text-slate-800 mb-6 text-center">My Timetable</h2>
                                <TimetableGrid 
@@ -1513,24 +1556,11 @@ The response must be in Markdown format, highly encouraging, and professional.`;
                             </div>
                         )}
                         
-                        {/* Handle case where user hits "View" with 0 courses */}
-                        {showTimetable && selectedCourses.length === 0 && (
-                             <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-                                <h2 className="text-2xl font-bold text-slate-800 mb-4">Empty Timetable</h2>
-                                <p className="text-slate-600 mb-6">You haven't selected any courses to display.</p>
-                                <button
-                                    onClick={() => setShowTimetable(false)}
-                                    className="px-4 py-2 rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition-all font-semibold shadow-md"
-                                >
-                                  ⬅️ Back to Selector
-                                </button>
-                            </div>
-                        )}
                     </div>
                 )}
             </div>
             <footer className="text-center py-4 text-sm text-slate-500">
-                Created by ❤️
+                Created by Love 
             </footer>
             
             {/* Analysis Modal */}
