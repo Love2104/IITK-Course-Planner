@@ -593,6 +593,15 @@ interface AnalysisModalProps {
     onClose: () => void;
 }
 
+// Utility for title caching course names
+function toTitleCase(str: string) {
+    if (!str) return '';
+    return str.replace(
+        /\w\S*/g,
+        (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
+    );
+}
+
 const CourseLoadAnalysisModal = ({ analysis, onClose }: AnalysisModalProps) => {
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
@@ -667,6 +676,7 @@ function CourseSelector({
   const [selectedBranch, setSelectedBranch] = useState<string>('');
 // placeholder by default
   const [selectedCourseType, setSelectedCourseType] = useState<string>('ALL'); 
+  const [selectedSlots, setSelectedSlots] = useState<string[]>([]); // NEW: HSS multiple slots state
   const [selectedCourseCode, setSelectedCourseCode] = useState<string>('');
 // Local state for modals
   const [showAvailableCourses, setShowAvailableCourses] = useState(false);
@@ -720,6 +730,11 @@ const courseTypes = useMemo(() => {
         ? filtered
         : filtered.filter(c => c.course_type.includes(selectedCourseType)); // "DC,Minor / REGULAR" includes "DC"
 
+    // 2.5 Filter by HSS Slot
+    if (selectedBranch === 'HSS' && selectedSlots.length > 0) {
+        filtered = filtered.filter(c => selectedSlots.includes(c.slot));
+    }
+
     // 3. Apply new Day/Time filters
     if (dayTimeFilters.length > 0) {
         filtered = filtered.filter(course => 
@@ -729,7 +744,7 @@ const courseTypes = useMemo(() => {
     }
 
     return filtered;
-  }, [courses, selectedBranch, selectedCourseType, dayTimeFilters]);
+  }, [courses, selectedBranch, selectedCourseType, selectedSlots, dayTimeFilters]);
 /**
    * NEW: Real-time clash detection
    * This memo calculates the clash status for every course in the filtered dropdown.
@@ -760,6 +775,7 @@ const totalCredits = useMemo(
 const handleBranchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedBranch(e.target.value);
     setSelectedCourseCode('');
+    setSelectedSlots([]);
   };
 const handleCourseTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       setSelectedCourseType(e.target.value);
@@ -803,6 +819,7 @@ setSelectedCourseCode('');
     // Reset local state
     setSelectedBranch('');
     setSelectedCourseType('ALL');
+    setSelectedSlots([]);
     setSelectedCourseCode('');
 // Call parent handler to reset global state
     onReset();
@@ -892,6 +909,35 @@ onChange={handleBranchChange}
                ))}
               </select>
             </div>
+
+            {/* NEW HSS Slot Selection (Multiple) */}
+            {selectedBranch === 'HSS' && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Filter by HSS Slot (Select multiple)
+                  </label>
+                  <div className="flex flex-col gap-2 p-3 border-2 border-slate-200 rounded-xl bg-slate-50">
+                    {["HSS I (1) HS1", "HSS II (1) HS2", "HSS II (2) HS2"].map(slot => (
+                        <label key={slot} className="flex items-center gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={selectedSlots.includes(slot)}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        setSelectedSlots([...selectedSlots, slot]);
+                                    } else {
+                                        setSelectedSlots(selectedSlots.filter(s => s !== slot));
+                                    }
+                                    setSelectedCourseCode('');
+                                }}
+                                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                            />
+                            <span className="text-slate-800 text-sm font-medium">{slot}</span>
+                        </label>
+                    ))}
+                  </div>
+                </div>
+            )}
 
             {/* --- NEW Day/Time Filter UI --- */}
             <div>
@@ -1002,7 +1048,7 @@ text-xs font-medium text-slate-600">End Time</label>
                 value={selectedCourseCode}
                 onChange={handleCourseChange}
                 disabled={!selectedBranch}
-                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       
         >
                 <option value="">
@@ -1033,8 +1079,8 @@ text-xs font-medium text-slate-600">End Time</label>
                         >
                             {hasClash 
                                 ?
-`🔴 ${course.course_code} - ${course.course_name} (Clashes with: ${clashes.join(', ')})`
-                                : `✅ ${course.course_code} - ${course.course_name}`
+`🔴 ${course.course_code} - ${toTitleCase(course.course_name)} - ${toTitleCase(course.instructor)} (Clashes: ${clashes.join(', ')})`
+                                : `✅ ${course.course_code} - ${toTitleCase(course.course_name)} - ${toTitleCase(course.instructor)}`
                             }
                         </option>
      
