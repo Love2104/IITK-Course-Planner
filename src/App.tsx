@@ -22,7 +22,8 @@ course_type: string;
     instructor_email: string;
     lecture_schedule: string;
     tutorial_schedule: string;
-    practical_schedule: string;
+    agp?: number;
+    grade_stats?: string;
 }
 
 interface TimeSlot {
@@ -677,6 +678,8 @@ function CourseSelector({
 // placeholder by default
   const [selectedCourseType, setSelectedCourseType] = useState<string>('ALL'); 
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]); // NEW: HSS multiple slots state
+  const [showHssGrades, setShowHssGrades] = useState(false);
+  const [sortHssByAgp, setSortHssByAgp] = useState(false);
   const [selectedCourseCode, setSelectedCourseCode] = useState<string>('');
 // Local state for modals
   const [showAvailableCourses, setShowAvailableCourses] = useState(false);
@@ -731,8 +734,13 @@ const courseTypes = useMemo(() => {
         : filtered.filter(c => c.course_type.includes(selectedCourseType)); // "DC,Minor / REGULAR" includes "DC"
 
     // 2.5 Filter by HSS Slot
-    if (selectedBranch === 'HSS' && selectedSlots.length > 0) {
-        filtered = filtered.filter(c => selectedSlots.includes(c.slot));
+    if (selectedBranch === 'HSS') {
+        if (selectedSlots.length > 0) {
+            filtered = filtered.filter(c => selectedSlots.includes(c.slot));
+        }
+        if (sortHssByAgp) {
+            filtered = [...filtered].sort((a, b) => (b.agp || 0) - (a.agp || 0));
+        }
     }
 
     // 3. Apply new Day/Time filters
@@ -820,6 +828,8 @@ setSelectedCourseCode('');
     setSelectedBranch('');
     setSelectedCourseType('ALL');
     setSelectedSlots([]);
+    setSortHssByAgp(false);
+    setShowHssGrades(false);
     setSelectedCourseCode('');
 // Call parent handler to reset global state
     onReset();
@@ -910,32 +920,96 @@ onChange={handleBranchChange}
               </select>
             </div>
 
-            {/* NEW HSS Slot Selection (Multiple) */}
+            {/* NEW HSS Slot Selection & Analytics */}
             {selectedBranch === 'HSS' && (
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Filter by HSS Slot (Select multiple)
-                  </label>
-                  <div className="flex flex-col gap-2 p-3 border-2 border-slate-200 rounded-xl bg-slate-50">
-                    {["HSS I (1) HS1", "HSS II (1) HS2", "HSS II (2) HS2"].map(slot => (
-                        <label key={slot} className="flex items-center gap-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={selectedSlots.includes(slot)}
-                                onChange={(e) => {
-                                    if (e.target.checked) {
-                                        setSelectedSlots([...selectedSlots, slot]);
-                                    } else {
-                                        setSelectedSlots(selectedSlots.filter(s => s !== slot));
-                                    }
-                                    setSelectedCourseCode('');
-                                }}
-                                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
-                            />
-                            <span className="text-slate-800 text-sm font-medium">{slot}</span>
-                        </label>
-                    ))}
+                <div className="space-y-4">
+                  <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Filter by HSS Slot (Select multiple)
+                      </label>
+                      <div className="flex flex-col gap-2 p-3 border-2 border-slate-200 rounded-xl bg-slate-50">
+                        {["HSS I (1) HS1", "HSS II (1) HS2", "HSS II (2) HS2"].map(slot => (
+                            <label key={slot} className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedSlots.includes(slot)}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedSlots([...selectedSlots, slot]);
+                                        } else {
+                                            setSelectedSlots(selectedSlots.filter(s => s !== slot));
+                                        }
+                                        setSelectedCourseCode('');
+                                    }}
+                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                                />
+                                <span className="text-slate-800 text-sm font-medium">{slot}</span>
+                            </label>
+                        ))}
+                      </div>
                   </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4">
+                      <label className="flex-1 flex items-center gap-3 cursor-pointer p-4 border-2 border-indigo-200 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition-all shadow-sm group">
+                        <input
+                          type="checkbox"
+                          checked={sortHssByAgp}
+                          onChange={(e) => setSortHssByAgp(e.target.checked)}
+                          className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
+                        />
+                        <span className="text-indigo-900 font-bold text-sm group-hover:text-indigo-700">Sort by Highest AGP Focus</span>
+                      </label>
+                      
+                      <label className="flex-1 flex items-center gap-3 cursor-pointer p-4 border-2 border-purple-200 rounded-xl bg-purple-50 hover:bg-purple-100 transition-all shadow-sm group">
+                        <input
+                          type="checkbox"
+                          checked={showHssGrades}
+                          onChange={(e) => setShowHssGrades(e.target.checked)}
+                          className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                        />
+                        <span className="text-purple-900 font-bold text-sm group-hover:text-purple-700">See All HSS Grading Stats</span>
+                      </label>
+                  </div>
+                  
+                  {/* Expanded HSS Grading Analytics View */}
+                  {showHssGrades && (
+                      <div className="mt-4 p-4 border-2 border-purple-300 bg-purple-50 rounded-xl max-h-96 overflow-y-auto shadow-inner">
+                          <h4 className="text-lg font-bold text-purple-900 mb-4 sticky top-0 bg-purple-50 pt-1 pb-2 border-b border-purple-200">HSS Grade Analytics</h4>
+                          <div className="space-y-4">
+                              {filteredCourses.length === 0 ? (
+                                  <p className="text-sm text-purple-600">No courses match the current filters.</p>
+                              ) : (
+                                  filteredCourses.map(c => (
+                                      <div key={c.course_code} className="bg-white p-4 rounded-xl border border-purple-200 shadow-sm hover:shadow-md transition-shadow">
+                                          <div className="flex justify-between items-start mb-2">
+                                              <div>
+                                                  <h5 className="font-bold text-slate-800 text-lg">{c.course_code} - {c.course_name}</h5>
+                                                  <p className="text-sm text-slate-600 font-medium">{c.instructor}</p>
+                                              </div>
+                                              {c.agp ? (
+                                                  <span className="inline-flex items-center justify-center px-3 py-1 text-sm font-bold bg-green-100 text-green-800 rounded-lg whitespace-nowrap">
+                                                      AGP {c.agp.toFixed(1)}
+                                                  </span>
+                                              ) : (
+                                                  <span className="inline-flex items-center justify-center px-3 py-1 text-sm font-bold bg-slate-100 text-slate-500 rounded-lg whitespace-nowrap">
+                                                      No AGP Data
+                                                  </span>
+                                              )}
+                                          </div>
+                                          
+                                          {c.grade_stats ? (
+                                              <div className="mt-3 pt-3 border-t border-slate-100 text-sm text-slate-700 whitespace-pre-wrap font-mono bg-slate-50 p-3 rounded-lg text-xs">
+                                                  {c.grade_stats.replace(/.*Grade Distribution:/is, "Grade Distribution:\n").trim()}
+                                              </div>
+                                          ) : (
+                                              <p className="text-xs text-slate-400 mt-2 italic">Detailed grading distribution is not available for this course.</p>
+                                          )}
+                                      </div>
+                                  ))
+                              )}
+                          </div>
+                      </div>
+                  )}
                 </div>
             )}
 
