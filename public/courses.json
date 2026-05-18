@@ -8,7 +8,7 @@
     "course_type": "REGULAR",
     "instructor": "P M MOHITE (I)",
     "instructor_email": "mohite@iitk.ac.in (I)",
-    "lecture_schedule": "M (T102) T (T102) Th (T102)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -21,7 +21,7 @@
     "course_type": "REGULAR",
     "instructor": "RAKESH  KUMAR (I), Rajesh Ranjan(O)",
     "instructor_email": "rkm@iitk.ac.in (I), rajeshr@iitk.ac.in (O)",
-    "lecture_schedule": "T (T105) Th (T105) F (T105)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -34,7 +34,7 @@
     "course_type": "REGULAR",
     "instructor": "ASHOKE  DE (I), SANTANU DE (O)",
     "instructor_email": "ashoke@iitk.ac.in (I), sde@iitk.ac.in (O)",
-    "lecture_schedule": "M (L12)  10:00-11:45",
+    "lecture_schedule": "M 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -190,7 +190,7 @@
     "course_type": "SO,DC",
     "instructor": "SARAVANAN MATHESHWARAN(I)",
     "instructor_email": "saran@iitk.ac.in (I)",
-    "lecture_schedule": "T (L15) Th (L15) F (L15)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -203,7 +203,7 @@
     "course_type": "REGULAR",
     "instructor": "Robert Sonowal(I), Sai Pydi(O)",
     "instructor_email": "rsonowal@iitk.ac.in (I), pydi@iitk.ac.in (O)",
-    "lecture_schedule": "M (T108) Th (T108)  08:00-09:45",
+    "lecture_schedule": "MTh 08:00-09:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -216,7 +216,7 @@
     "course_type": "REGULAR",
     "instructor": "Salil Goel(I)",
     "instructor_email": "sgoel@iitk.ac.in (I)",
-    "lecture_schedule": "M (T106) T (T106)  12:00-13:45",
+    "lecture_schedule": "MT 12:00-13:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "WTh 10:00-13:00"
   },
@@ -229,7 +229,7 @@
     "course_type": "REGULAR",
     "instructor": "NIHAR RANJAN PATRA (I)",
     "instructor_email": "nrpatra@iitk.ac.in (I)",
-    "lecture_schedule": "M (T108) T (T108) Th (T108)  10:00-11:45",
+    "lecture_schedule": "MTTh 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "W 14:00-17:00"
   },
@@ -242,7 +242,7 @@
     "course_type": "REGULAR",
     "instructor": "DURGESH C  RAI (I)",
     "instructor_email": "dcrai@iitk.ac.in (I)",
-    "lecture_schedule": "T (L10) Th (L10) F (L10)  16:15-18:00",
+    "lecture_schedule": "TThF 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -320,7 +320,7 @@
     "course_type": "REGULAR",
     "instructor": "ARK VERMA(I)",
     "instructor_email": "arkverma@iitk.ac.in (I)",
-    "lecture_schedule": "T (L01) Th (L01) F (L01)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -333,7 +333,7 @@
     "course_type": "REGULAR",
     "instructor": "Himanshu Yadav(I)",
     "instructor_email": "himanshu@iitk.ac.in (I)",
-    "lecture_schedule": "M (L01) T (L01) Th (L01)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -385,7 +385,7 @@
     "course_type": "REGULAR",
     "instructor": "Himanshu   Sharma(I)",
     "instructor_email": "sharmah@iitk.ac.in (I)",
-    "lecture_schedule": "T (T109)  12:00-13:45",
+    "lecture_schedule": "T 12:00-13:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -398,7 +398,7 @@
     "course_type": "REGULAR",
     "instructor": "NITIN  KAISTHA (I)",
     "instructor_email": "nkaistha@iitk.ac.in (I)",
-    "lecture_schedule": "M (T107) W (T107) Th (T107)  14:15-16:00",
+    "lecture_schedule": "MWTh 14:15-16:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "TF 14:00-17:00"
   },
@@ -411,7 +411,7 @@
     "course_type": "REGULAR",
     "instructor": "INDRANIL SAHA DALAL(I)",
     "instructor_email": "indrasd@iitk.ac.in (I)",
-    "lecture_schedule": "T (L11) Th (L11) F (L11)  16:15-18:00",
+    "lecture_schedule": "TThF 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -463,8 +463,8 @@
     "course_type": "SO",
     "instructor": "SANTANU DE (I)",
     "instructor_email": "sde@iitk.ac.in (I)",
-    "lecture_schedule": "M (L15) W (L15) Th (L15)  16:15-18:00",
-    "tutorial_schedule": "T (L15)  16:15-18:00",
+    "lecture_schedule": "MWTh 16:15-18:00",
+    "tutorial_schedule": "T 16:15-18:00",
     "practical_schedule": "nan"
   },
   {
@@ -476,7 +476,7 @@
     "course_type": "SO",
     "instructor": "ANURAG TRIPATHI(I), NAVEEN TIWARI(O)",
     "instructor_email": "anuragt@iitk.ac.in (I), naveent@iitk.ac.in (O)",
-    "lecture_schedule": "M (L14) W (L14) Th (L14) F (L14)  12:00-13:45",
+    "lecture_schedule": "MWThF 12:00-13:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -489,8 +489,8 @@
     "course_type": "FIRST-HALF",
     "instructor": "DASARI L V K PRASAD(I)",
     "instructor_email": "dprasad@iitk.ac.in (I)",
-    "lecture_schedule": "M (L12) W (L12)  12:00-13:45",
-    "tutorial_schedule": "Th (L12)  12:00-13:45",
+    "lecture_schedule": "MW 12:00-13:45",
+    "tutorial_schedule": "Th 12:00-13:45",
     "practical_schedule": "nan"
   },
   {
@@ -502,8 +502,8 @@
     "course_type": "SECOND-HALF",
     "instructor": "Apparao Draksharapu(I), Dharmaraja Allimuthu(O)",
     "instructor_email": "appud@iitk.ac.in (I), atdharma@iitk.ac.in (O)",
-    "lecture_schedule": "M (T108) W (T108)  12:00-13:45",
-    "tutorial_schedule": "Th (T108)  12:00-13:45",
+    "lecture_schedule": "MW 12:00-13:45",
+    "tutorial_schedule": "Th 12:00-13:45",
     "practical_schedule": "nan"
   },
   {
@@ -515,7 +515,7 @@
     "course_type": "REGULAR",
     "instructor": "DATTATRAYA H DETHE(I), MANAS KUMAR  GHORAI (O)",
     "instructor_email": "ddethe@iitk.ac.in (I), mkghorai@iitk.ac.in (O)",
-    "lecture_schedule": "M (L05) T (L05) Th (L05)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -528,7 +528,7 @@
     "course_type": "REGULAR",
     "instructor": "DASARI L V K PRASAD(I)",
     "instructor_email": "dprasad@iitk.ac.in (I)",
-    "lecture_schedule": "T (L06) Th (L06) F (L06)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -541,7 +541,7 @@
     "course_type": "REGULAR",
     "instructor": "SABUJ KUMAR KUNDU(I), Ritika  Gautam(O)",
     "instructor_email": "sabuj@iitk.ac.in (I), rgautam@iitk.ac.in (O)",
-    "lecture_schedule": "T (L11) Th (L11) F (L11)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -554,7 +554,7 @@
     "course_type": "REGULAR",
     "instructor": "ANANTHARAMAN  GANAPATHI (I)",
     "instructor_email": "garaman@iitk.ac.in (I)",
-    "lecture_schedule": "T (CHM: FB426) Th (CHM: FB426) F (CHM: FB426)  10:00-11:45",
+    "lecture_schedule": "T(CHM:FB426)Th(CHM:FB426)F(CHM:FB426) 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -567,7 +567,7 @@
     "course_type": "REGULAR",
     "instructor": "RAJA ANGAMUTHU(I)",
     "instructor_email": "raja@iitk.ac.in (I)",
-    "lecture_schedule": "M (L02) T (L02) Th (L02)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -593,8 +593,8 @@
     "course_type": "REGULAR",
     "instructor": "Srinivas Dharavath(I)",
     "instructor_email": "srinivasd@iitk.ac.in (I)",
-    "lecture_schedule": "M (L06) W (L06) Th (L06)  16:15-18:00",
-    "tutorial_schedule": "T (L06)  16:15-18:00",
+    "lecture_schedule": "MWTh 16:15-18:00",
+    "tutorial_schedule": "T 16:15-18:00",
     "practical_schedule": "nan"
   },
   {
@@ -606,7 +606,7 @@
     "course_type": "REGULAR",
     "instructor": "Angshuman Karmakar(I)",
     "instructor_email": "angshuman@iitk.ac.in (I)",
-    "lecture_schedule": "M (L12) T (L12) Th (L12)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -619,7 +619,7 @@
     "course_type": "REGULAR",
     "instructor": "Soumya Dutta(I)",
     "instructor_email": "soumyad@iitk.ac.in (I)",
-    "lecture_schedule": "M (L17) W (L17) Th (L17)  16:15-18:00",
+    "lecture_schedule": "MWTh 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -645,7 +645,7 @@
     "course_type": "REGULAR",
     "instructor": "PURUSHOTTAM  KAR (I)",
     "instructor_email": "purushot@iitk.ac.in (I)",
-    "lecture_schedule": "T (L17) Th (L17) F (L17)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -684,7 +684,7 @@
     "course_type": "REGULAR",
     "instructor": "JANAKARAJAN  RAMKUMAR   (I)",
     "instructor_email": "jrkumar@iitk.ac.in (I)",
-    "lecture_schedule": "M (T109) T (T109) Th (T109)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -723,7 +723,7 @@
     "course_type": "REGULAR",
     "instructor": "Nivedita Bhaktha(I)",
     "instructor_email": "nbhaktha@iitk.ac.in (I)",
-    "lecture_schedule": "T (L12) Th (L12) F (L12)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -814,7 +814,7 @@
     "course_type": "REGULAR",
     "instructor": "Abhinava Tripathi(I)",
     "instructor_email": "abhinavat@iitk.ac.in (I)",
-    "lecture_schedule": "M (IME: C5) T (IME: C5) Th (IME: C5)  16:15-18:00",
+    "lecture_schedule": "M(IME:C5)T(IME:C5)Th(IME:C5) 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -840,7 +840,7 @@
     "course_type": "FIRST-HALF",
     "instructor": "Mousami Prasad(I)",
     "instructor_email": "mousami@iitk.ac.in (I)",
-    "lecture_schedule": "M (L01) W (L01) Th (L01)  12:00-13:45",
+    "lecture_schedule": "MWTh 12:00-13:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -853,8 +853,8 @@
     "course_type": "REGULAR",
     "instructor": "MOHAMMAD ARSHAD RAHMAN(I)",
     "instructor_email": "marshad@iitk.ac.in (I)",
-    "lecture_schedule": "M (L11) T (L11) Th (L11)  12:00-13:45",
-    "tutorial_schedule": "W (L11)  12:00-13:45",
+    "lecture_schedule": "MTTh 12:00-13:45",
+    "tutorial_schedule": "W 12:00-13:45",
     "practical_schedule": "nan"
   },
   {
@@ -866,7 +866,7 @@
     "course_type": "REGULAR",
     "instructor": "SOMESH KUMAR  MATHUR (I)",
     "instructor_email": "skmathur@iitk.ac.in (I)",
-    "lecture_schedule": "T (T102) Th (T102) F (T102)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -892,7 +892,7 @@
     "course_type": "REGULAR",
     "instructor": "Sanjiv Kumar(I)",
     "instructor_email": "sanjiv@iitk.ac.in (I)",
-    "lecture_schedule": "M (L07) T (L07) Th (L07)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -918,8 +918,8 @@
     "course_type": "REGULAR",
     "instructor": "Tushar Sandhan(I)",
     "instructor_email": "sandhan@iitk.ac.in (I)",
-    "lecture_schedule": "M (L07) W (L07) Th (L07)  08:00-09:45",
-    "tutorial_schedule": "T (L07)  08:00-09:45",
+    "lecture_schedule": "MWTh 08:00-09:45",
+    "tutorial_schedule": "T 08:00-09:45",
     "practical_schedule": "nan"
   },
   {
@@ -931,7 +931,7 @@
     "course_type": "REGULAR",
     "instructor": "Washim Mondal(I)",
     "instructor_email": "wmondal@iitk.ac.in (I)",
-    "lecture_schedule": "T (L12) Th (L12) F (L12)  14:15-16:00",
+    "lecture_schedule": "TThF 14:15-16:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -944,7 +944,7 @@
     "course_type": "REGULAR",
     "instructor": "Mohit Ganeriwala(I)",
     "instructor_email": "mohitdg@iitk.ac.in (I)",
-    "lecture_schedule": "T (L11) Th (L11) F (L11)  08:00-09:45",
+    "lecture_schedule": "TThF 08:00-09:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -957,8 +957,8 @@
     "course_type": "REGULAR",
     "instructor": "Gururaj Vishwanath(I)",
     "instructor_email": "gururajmv@iitk.ac.in (I)",
-    "lecture_schedule": "T (T105) W (T105) F (T105)  12:00-13:45",
-    "tutorial_schedule": "Th (T105)  12:00-13:45",
+    "lecture_schedule": "TWF 12:00-13:45",
+    "tutorial_schedule": "Th 12:00-13:45",
     "practical_schedule": "nan"
   },
   {
@@ -970,7 +970,7 @@
     "course_type": "REGULAR",
     "instructor": "Raghvendra Chaudhary(I)",
     "instructor_email": "raghvendra@iitk.ac.in (I)",
-    "lecture_schedule": "T (T101) Th (T101) F (T101)  16:15-18:00",
+    "lecture_schedule": "TThF 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -983,7 +983,7 @@
     "course_type": "REGULAR",
     "instructor": "SOUMYA RANJAN  SAHOO (I), Abhilash Patel(O)",
     "instructor_email": "srsahoo@iitk.ac.in (I), apatel@iitk.ac.in (O)",
-    "lecture_schedule": "T (L14) Th (L14) F (L14)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -996,7 +996,7 @@
     "course_type": "REGULAR",
     "instructor": "NISHCHAL KUMAR VERMA (I)",
     "instructor_email": "nishchal@iitk.ac.in (I)",
-    "lecture_schedule": "M (L16) T (L16) Th (L16)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "W 14:00-17:00"
   },
@@ -1048,8 +1048,8 @@
     "course_type": "REGULAR",
     "instructor": "Rik Dey(I)",
     "instructor_email": "rikdey@iitk.ac.in (I)",
-    "lecture_schedule": "M (T103) W (T103) Th (T103)  10:00-11:45",
-    "tutorial_schedule": "T (T103)  10:00-11:45",
+    "lecture_schedule": "MWTh 10:00-11:45",
+    "tutorial_schedule": "T 10:00-11:45",
     "practical_schedule": "MTWThF 14:00-17:00"
   },
   {
@@ -1100,7 +1100,7 @@
     "course_type": "REGULAR",
     "instructor": "RITWIJ BHOWMIK(I)",
     "instructor_email": "ritwij@iitk.ac.in (I)",
-    "lecture_schedule": "T (L16) Th (L16) F (L16)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1113,8 +1113,8 @@
     "course_type": "REGULAR",
     "instructor": "Muthukumar M(I)",
     "instructor_email": "mkmuthu@iitk.ac.in (I)",
-    "lecture_schedule": "T (L07) Th (L07) F (L07)  10:00-11:45",
-    "tutorial_schedule": "W (L07)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
+    "tutorial_schedule": "W 10:00-11:45",
     "practical_schedule": "nan"
   },
   {
@@ -1152,7 +1152,7 @@
     "course_type": "SECOND-HALF",
     "instructor": "VINEET  SAHU (I)",
     "instructor_email": "vineet@iitk.ac.in (I)",
-    "lecture_schedule": "M (L04) W (L04) Th (L04)  12:00-13:45",
+    "lecture_schedule": "MWTh 12:00-13:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1178,8 +1178,8 @@
     "course_type": "REGULAR",
     "instructor": "SHIKHA   DIXIT  (I)",
     "instructor_email": "shikha@iitk.ac.in (I)",
-    "lecture_schedule": "M (L04) T (L04) Th (L04)  16:15-18:00",
-    "tutorial_schedule": "W (L04)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
+    "tutorial_schedule": "W 16:15-18:00",
     "practical_schedule": "nan"
   },
   {
@@ -1204,7 +1204,7 @@
     "course_type": "REGULAR",
     "instructor": "ANINDITA CHAKRABARTI (I)",
     "instructor_email": "aninditac@iitk.ac.in (I)",
-    "lecture_schedule": "M (L03) T (L03) Th (L03)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1282,7 +1282,7 @@
     "course_type": "REGULAR",
     "instructor": "PANKAJ  WAHI   (I)",
     "instructor_email": "wahi@iitk.ac.in (I)",
-    "lecture_schedule": "M (L15) W (L15) Th (L15)  12:00-13:45",
+    "lecture_schedule": "MWTh 12:00-13:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1295,7 +1295,7 @@
     "course_type": "REGULAR",
     "instructor": "SUBRATA  SARKAR   (I)",
     "instructor_email": "subra@iitk.ac.in (I)",
-    "lecture_schedule": "M (T109)  08:00-09:45",
+    "lecture_schedule": "M 08:00-09:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1308,7 +1308,7 @@
     "course_type": "REGULAR",
     "instructor": "Dipayan Mukherjee(I), Ushasi Roy(O)",
     "instructor_email": "dipayanm@iitk.ac.in (I), ushasiroy@iitk.ac.in (O)",
-    "lecture_schedule": "T (T106) Th (T106) F (T112)  16:15-18:00",
+    "lecture_schedule": "TThF 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1321,7 +1321,7 @@
     "course_type": "REGULAR",
     "instructor": "Shyam Gopalakrishnan(I)",
     "instructor_email": "shyamsg@iitk.ac.in (I)",
-    "lecture_schedule": "T (T104)  12:00-13:45",
+    "lecture_schedule": "T 12:00-13:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1347,7 +1347,7 @@
     "course_type": "REGULAR",
     "instructor": "JISHNU BHATTACHARYA (I)",
     "instructor_email": "jishnu@iitk.ac.in (I)",
-    "lecture_schedule": "M (L11) W (L11) Th (L11)  14:15-16:00",
+    "lecture_schedule": "MWTh 14:15-16:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1360,7 +1360,7 @@
     "course_type": "REGULAR",
     "instructor": "JISHNU BHATTACHARYA (I)",
     "instructor_email": "jishnu@iitk.ac.in (I)",
-    "lecture_schedule": "M (L11) W (L11) Th (L11)  14:15-16:00",
+    "lecture_schedule": "MWTh 14:15-16:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1386,7 +1386,7 @@
     "course_type": "REGULAR",
     "instructor": "MALAY KUMAR DAS (I)",
     "instructor_email": "mkdas@iitk.ac.in (I)",
-    "lecture_schedule": "T (T109) Th (T109) F (T109)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1412,7 +1412,7 @@
     "course_type": "REGULAR",
     "instructor": "B  BHATTACHARYA   (I)",
     "instructor_email": "bishakh@iitk.ac.in (I)",
-    "lecture_schedule": "M (T104) T (T104) Th (T104)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1451,7 +1451,7 @@
     "course_type": "REGULAR",
     "instructor": "ANSHU GAUR(I)",
     "instructor_email": "agaur@iitk.ac.in (I)",
-    "lecture_schedule": "M (T106) T (T106) Th (T106)  08:00-09:45",
+    "lecture_schedule": "MTTh 08:00-09:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1464,7 +1464,7 @@
     "course_type": "REGULAR",
     "instructor": "SHASHANK SHEKHAR(I), KRISHANU  BISWAS (O)",
     "instructor_email": "shashank@iitk.ac.in (I), kbiswas@iitk.ac.in (O)",
-    "lecture_schedule": "M (T103) T (T103) Th (T103)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1477,7 +1477,7 @@
     "course_type": "REGULAR",
     "instructor": "Shivam Tripathi(I), KRISHANU  BISWAS (O)",
     "instructor_email": "shivamt@iitk.ac.in (I), kbiswas@iitk.ac.in (O)",
-    "lecture_schedule": "T (L03) Th (L03) F (L03)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1490,7 +1490,7 @@
     "course_type": "REGULAR",
     "instructor": "SUDHANSHU SHEKHAR SINGH (I)",
     "instructor_email": "sudhanss@iitk.ac.in (I)",
-    "lecture_schedule": "M (L11)  16:15-18:00",
+    "lecture_schedule": "M 16:15-18:00",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1555,8 +1555,8 @@
     "course_type": "SECOND-HALF",
     "instructor": "Saurabh Singh(I)",
     "instructor_email": "saurabs@iitk.ac.in (I)",
-    "lecture_schedule": "M (T107) T (T107) Th (T107)  08:00-09:45",
-    "tutorial_schedule": "W (T107)  08:00-09:45",
+    "lecture_schedule": "MTTh 08:00-09:45",
+    "tutorial_schedule": "W 08:00-09:45",
     "practical_schedule": "nan"
   },
   {
@@ -1568,8 +1568,8 @@
     "course_type": "SO",
     "instructor": "Muthukumar P(I)",
     "instructor_email": "muthu@iitk.ac.in (I)",
-    "lecture_schedule": "M (L04) T (L04) Th (L04)  08:00-09:45",
-    "tutorial_schedule": "W (L04)  08:00-09:45",
+    "lecture_schedule": "MTTh 08:00-09:45",
+    "tutorial_schedule": "W 08:00-09:45",
     "practical_schedule": "nan"
   },
   {
@@ -1581,8 +1581,8 @@
     "course_type": "REGULAR",
     "instructor": "Santosh  Nadimpalli(I), SANTOSHA KUMAR PATTANAYAK(O)",
     "instructor_email": "nsantosh@iitk.ac.in (I), santosha@iitk.ac.in (O)",
-    "lecture_schedule": "M (T105) T (T105) W (T105)  16:15-18:00",
-    "tutorial_schedule": "Th (T105)  16:15-18:00",
+    "lecture_schedule": "MTW 16:15-18:00",
+    "tutorial_schedule": "Th 16:15-18:00",
     "practical_schedule": "nan"
   },
   {
@@ -1594,8 +1594,8 @@
     "course_type": "REGULAR",
     "instructor": "Ajay Singh Ramdin Thakur (I)",
     "instructor_email": "asthakur@iitk.ac.in (I)",
-    "lecture_schedule": "T (T106) Th (T106) F (T106)  10:00-11:45",
-    "tutorial_schedule": "W (T106)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
+    "tutorial_schedule": "W 10:00-11:45",
     "practical_schedule": "nan"
   },
   {
@@ -1607,7 +1607,7 @@
     "course_type": "REGULAR",
     "instructor": "Bidyut Sanki(I)",
     "instructor_email": "bidyut@iitk.ac.in (I)",
-    "lecture_schedule": "M (L06) W (L06) Th (L06)  12:00-13:45",
+    "lecture_schedule": "MWTh 12:00-13:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1620,8 +1620,8 @@
     "course_type": "REGULAR",
     "instructor": "Mrinmay Biswas(I)",
     "instructor_email": "mbiswas@iitk.ac.in (I)",
-    "lecture_schedule": "M (T107) T (T107) Th (T107)  16:15-18:00",
-    "tutorial_schedule": "W (T107)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
+    "tutorial_schedule": "W 16:15-18:00",
     "practical_schedule": "nan"
   },
   {
@@ -1633,8 +1633,8 @@
     "course_type": "REGULAR",
     "instructor": "Mrinmay Biswas(I)",
     "instructor_email": "mbiswas@iitk.ac.in (I)",
-    "lecture_schedule": "T (T107) Th (T107) F (T107)  10:00-11:45",
-    "tutorial_schedule": "W (T107)  10:00-11:45",
+    "lecture_schedule": "TThF 10:00-11:45",
+    "tutorial_schedule": "W 10:00-11:45",
     "practical_schedule": "nan"
   },
   {
@@ -1659,8 +1659,8 @@
     "course_type": "REGULAR",
     "instructor": "Sudeep Ghosh(I)",
     "instructor_email": "skghosh@iitk.ac.in (I)",
-    "lecture_schedule": "M (L03) T (L03) W (L03)  08:00-09:45",
-    "tutorial_schedule": "Th (L03)  08:00-09:45",
+    "lecture_schedule": "MTW 08:00-09:45",
+    "tutorial_schedule": "Th 08:00-09:45",
     "practical_schedule": "nan"
   },
   {
@@ -1672,8 +1672,8 @@
     "course_type": "REGULAR",
     "instructor": "Taraknath Mandal(I)",
     "instructor_email": "taraknath@iitk.ac.in (I)",
-    "lecture_schedule": "T (L04) W (L04) F (L04)  10:00-11:45",
-    "tutorial_schedule": "Th (L04)  10:00-11:45",
+    "lecture_schedule": "TWF 10:00-11:45",
+    "tutorial_schedule": "Th 10:00-11:45",
     "practical_schedule": "nan"
   },
   {
@@ -1685,8 +1685,8 @@
     "course_type": "REGULAR",
     "instructor": "Chanchal  Sow(I)",
     "instructor_email": "chanchal@iitk.ac.in (I)",
-    "lecture_schedule": "M (L14) T (L14) Th (L14)  16:15-18:00",
-    "tutorial_schedule": "W (L14)  16:15-18:00",
+    "lecture_schedule": "MTTh 16:15-18:00",
+    "tutorial_schedule": "W 16:15-18:00",
     "practical_schedule": "nan"
   },
   {
@@ -1698,8 +1698,8 @@
     "course_type": "REGULAR",
     "instructor": "Arijit Kundu(I), TAPOBRATA  SARKAR   (O)",
     "instructor_email": "kundua@iitk.ac.in (I), tapo@iitk.ac.in (O)",
-    "lecture_schedule": "M (T108) W (T108) Th (T108)  16:15-18:00",
-    "tutorial_schedule": "T (T108)  16:15-18:00",
+    "lecture_schedule": "MWTh 16:15-18:00",
+    "tutorial_schedule": "T 16:15-18:00",
     "practical_schedule": "nan"
   },
   {
@@ -1724,8 +1724,8 @@
     "course_type": "REGULAR",
     "instructor": "TAPOBRATA  SARKAR   (I)",
     "instructor_email": "tapo@iitk.ac.in (I)",
-    "lecture_schedule": "M (T108) T (T108) Th (T108)  14:15-16:00",
-    "tutorial_schedule": "W (T108)  14:15-16:00",
+    "lecture_schedule": "MTTh 14:15-16:00",
+    "tutorial_schedule": "W 14:15-16:00",
     "practical_schedule": "nan"
   },
   {
@@ -1737,8 +1737,8 @@
     "course_type": "REGULAR",
     "instructor": "Supratik Banerjee(I)",
     "instructor_email": "sbanerjee@iitk.ac.in (I)",
-    "lecture_schedule": "M (L12) T (L12) Th (L12)  08:00-09:45",
-    "tutorial_schedule": "W (L12)  08:00-09:45",
+    "lecture_schedule": "MTTh 08:00-09:45",
+    "tutorial_schedule": "W 08:00-09:45",
     "practical_schedule": "nan"
   },
   {
@@ -1815,7 +1815,7 @@
     "course_type": "REGULAR",
     "instructor": "Satya Singh(I)",
     "instructor_email": "singhsp@iitk.ac.in (I)",
-    "lecture_schedule": "M (T104) T (T104) Th (T104)  08:00-09:45",
+    "lecture_schedule": "MTTh 08:00-09:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
@@ -1828,7 +1828,7 @@
     "course_type": "REGULAR",
     "instructor": "ASHISH GARG(I)",
     "instructor_email": "ashishg@iitk.ac.in (I)",
-    "lecture_schedule": "W (L16)  12:00-13:45",
+    "lecture_schedule": "W 12:00-13:45",
     "tutorial_schedule": "nan",
     "practical_schedule": "nan"
   },
