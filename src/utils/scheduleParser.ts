@@ -1,4 +1,6 @@
-import { DaywiseTimeFilter } from '../App';
+export interface DaywiseTimeFilter {
+    [day: string]: { start?: string; end?: string } | undefined;
+}
 
 // --- 1. INTERFACES ---
 
